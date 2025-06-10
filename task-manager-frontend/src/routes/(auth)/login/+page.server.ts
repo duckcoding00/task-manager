@@ -1,7 +1,6 @@
 import type { Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { fail, isRedirect, redirect } from '@sveltejs/kit';
-import { invalidateAll } from '$app/navigation';
 
 export const load = (async () => {
 	return {};
@@ -15,7 +14,6 @@ export const actions: Actions = {
 		const password = form.get('password');
 		const path = url.searchParams.get('redirectTo') || '';
 
-		// Validasi input di frontend
 		if (!username || !password) {
 			return fail(400, {
 				message: 'Username and password are required',
@@ -42,7 +40,6 @@ export const actions: Actions = {
 			console.log('Response status:', response.status);
 			console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-			// Cek apakah response memiliki content
 			const contentType = response.headers.get('content-type');
 			const contentLength = response.headers.get('content-length');
 
@@ -51,7 +48,6 @@ export const actions: Actions = {
 
 			let result;
 
-			// Handle empty response atau non-JSON content
 			if (contentLength === '0' || !contentType?.includes('application/json')) {
 				console.log('Empty or non-JSON response received');
 				result = {
@@ -59,7 +55,6 @@ export const actions: Actions = {
 					message: response.ok ? 'Login successful' : 'Server returned empty response'
 				};
 			} else {
-				// Baca response text terlebih dahulu untuk debugging
 				const responseText = await response.text();
 				console.log('Raw response:', responseText);
 
@@ -88,14 +83,23 @@ export const actions: Actions = {
 			if (response.ok) {
 				console.log('Login successful, setting cookies and redirecting...');
 
-				// Handle different success response formats
 				const accessToken = result.data?.access_token || result.access_token || result.token;
 
 				if (accessToken) {
+					// prod
+					// cookies.set('access_token', accessToken, {
+					// 	path: '/',
+					// 	httpOnly: true,
+					// 	sameSite: 'strict',
+					// 	maxAge: 60 * 60 * 24 * 7
+					// });
+
+					// dev
 					cookies.set('access_token', accessToken, {
 						path: '/',
 						httpOnly: true,
-						sameSite: 'strict',
+						sameSite: 'lax',
+						secure: false,
 						maxAge: 60 * 60 * 24 * 7
 					});
 				}
@@ -104,7 +108,6 @@ export const actions: Actions = {
 			} else {
 				console.log('Login failed:', result);
 
-				// Handle berbagai format error dari backend
 				if (result.errors === 'VALIDATION_ERROR' && result.details?.validations) {
 					const validations: string[] = result.details.validations;
 
@@ -133,7 +136,6 @@ export const actions: Actions = {
 					});
 				}
 
-				// Generic error handling
 				return fail(response.status || 400, {
 					message: result.message || result.error || 'Login failed',
 					backendError: result.errors || 'Unknown error',
@@ -152,15 +154,5 @@ export const actions: Actions = {
 				username: username?.toString()
 			});
 		}
-	},
-
-	logout: ({ cookies, url }) => {
-		cookies.delete('access_token', {
-			path: '/'
-		});
-
-		const path = url.searchParams.get('redirectTo') || '/';
-
-		throw redirect(303, path);
 	}
 };
