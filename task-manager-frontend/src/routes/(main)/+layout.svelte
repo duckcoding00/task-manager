@@ -60,7 +60,6 @@
 			if (result.type === 'success') {
 				closeModal();
 				await invalidateAll();
-				await update();
 				return;
 			}
 
@@ -79,6 +78,8 @@
 					errorMessages = [];
 				}
 			}
+
+			await update();
 		};
 	}
 </script>
@@ -191,20 +192,6 @@
 			</Card>
 		</div>
 	</Modal>
-
-	{#if page.url.pathname.startsWith('/task')}
-		<div class="fixed right-6 bottom-6 z-50">
-			<Button
-				class="h-14 w-14 rounded-full bg-[#1e2838] shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl"
-				onclick={() => goto('/')}
-			>
-				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"
-					></path>
-				</svg>
-			</Button>
-		</div>
-	{/if}
 
 	{@render children()}
 {:else}

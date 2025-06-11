@@ -10,6 +10,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.ValidationException;
 import jakarta.ws.rs.NotFoundException;
 import task.manager.backend.dto.request.TaskRequest;
 import task.manager.backend.dto.response.TaskResponse;
@@ -88,6 +89,68 @@ public class TaskService {
                 })
                 .onFailure().transform(throwable -> {
                     return new RuntimeException("Failed to get tasks : " + throwable.getMessage(), throwable);
+                });
+    }
+
+    public Uni<Void> delete(Integer taskId, Integer userId) {
+        return taskRepository.get(taskId)
+                .onItem().transform(task -> {
+                    if (task == null) {
+                        throw new NotFoundException("task not found");
+                    }
+
+                    if (!task.getUserId().equals(userId)) {
+                        throw new UnauthorizedException("access denied");
+                    }
+
+                    return task.getId();
+                })
+                .flatMap(validTaskId -> taskRepository.deletedByID(validTaskId))
+                .onFailure(NotFoundException.class).invoke(ex -> {
+                    log.errorf("Task not found for deletion [ID: %s]", taskId);
+                })
+                .onFailure(UnauthorizedException.class).invoke(ex -> {
+                    log.errorf("Unauthorized delete attempt [TaskID: %s, UserID: %s]", taskId, userId);
+                })
+                .onFailure(throwable -> !(throwable instanceof NotFoundException)
+                        && !(throwable instanceof UnauthorizedException))
+                .transform(throwable -> {
+                    return new RuntimeException("Failed to delete task: " + throwable.getMessage(), throwable);
+                });
+
+    }
+
+    public Uni<Void> updateStatus(Integer taskId, Integer userId, String status) {
+        return taskRepository.get(taskId)
+                .onItem().transform(task -> {
+                    if (status == null || status.trim().isEmpty()) {
+                        throw new ValidationException("status cant be null");
+                    }
+
+                    if (task == null) {
+                        throw new NotFoundException("task not found");
+                    }
+
+                    if (!task.getUserId().equals(userId)) {
+                        throw new UnauthorizedException("access denied");
+                    }
+
+                    return task.getId();
+                })
+                .flatMap(validTaskId -> taskRepository.updateStatus(validTaskId, status))
+                .onFailure(NotFoundException.class).invoke(ex -> {
+                    log.errorf("Task not found for update [ID: %s]", taskId);
+                })
+                .onFailure(UnauthorizedException.class).invoke(ex -> {
+                    log.errorf("Unauthorized update attempt [TaskID: %s, UserID: %s]", taskId, userId);
+                })
+                .onFailure(ValidationException.class).invoke(ex -> {
+                    log.errorf("status not found for update [ID: %s]", taskId);
+                })
+                .onFailure(throwable -> !(throwable instanceof NotFoundException)
+                        && !(throwable instanceof UnauthorizedException) && !(throwable instanceof ValidationException))
+                .transform(throwable -> {
+                    return new RuntimeException("Failed to update task: " + throwable.getMessage(), throwable);
                 });
     }
 }

@@ -45,6 +45,10 @@ public class TaskRepository {
             delete from tasks where id = $1
             """;
 
+    private static final String UPDATE_STATUS_TASK = """
+            update tasks set status = $1, updated_at = $2 where id = $3
+            """;
+
     // mapping
     private TaskEntity mappingEntity(Row row) {
         TaskEntity task = new TaskEntity();
@@ -130,4 +134,18 @@ public class TaskRepository {
         return client.withConnection(conn -> deletedByID(id, conn));
     }
 
+    public Uni<Void> updateStatus(Integer id, String status, SqlConnection conn) {
+        OffsetDateTime now = OffsetDateTime.now();
+
+        return conn.preparedQuery(UPDATE_STATUS_TASK)
+                .execute(Tuple.of(status, now, id))
+                .replaceWithVoid()
+                .onFailure().invoke(throwable -> {
+                    log.errorf("failed to update status task [ID: %id] : %s", id, throwable.getMessage());
+                });
+    }
+
+    public Uni<Void> updateStatus(Integer id, String status) {
+        return client.withConnection(conn -> updateStatus(id, status, conn));
+    }
 }

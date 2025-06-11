@@ -12,6 +12,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.UnexpectedTypeException;
+import jakarta.validation.ValidationException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import task.manager.backend.utils.ApiResponse;
@@ -30,7 +31,7 @@ public class GlobalException {
         }
 
         @ServerExceptionMapper
-        public Uni<RestResponse<ApiResponse<Object>>> handleValidationException(ConstraintViolationException e) {
+        public Uni<RestResponse<ApiResponse<Object>>> handleConstraintException(ConstraintViolationException e) {
                 List<String> errors = e.getConstraintViolations()
                                 .stream()
                                 .map(violation -> violation.getMessage() != null ? violation.getMessage()
@@ -74,5 +75,16 @@ public class GlobalException {
                                 "UNAUTHORIZED", errors);
 
                 return Uni.createFrom().item(RestResponse.status(Response.Status.UNAUTHORIZED, error));
+        }
+
+        @ServerExceptionMapper
+        public Uni<RestResponse<ApiResponse<Object>>> handleValidationException(ValidationException e) {
+                Map<String, Object> errors = Map.of(
+                                "error", e.getMessage() != null ? e.getMessage() : "Validation Error");
+
+                ApiResponse<Object> error = ApiResponse.error(Response.Status.BAD_REQUEST.getStatusCode(),
+                                "VALIDATION", errors);
+
+                return Uni.createFrom().item(RestResponse.status(Response.Status.BAD_REQUEST, error));
         }
 }

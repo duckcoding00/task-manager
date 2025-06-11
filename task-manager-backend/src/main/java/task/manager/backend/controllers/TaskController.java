@@ -5,13 +5,17 @@ import org.jboss.resteasy.reactive.RestResponse;
 
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
@@ -37,9 +41,10 @@ public class TaskController {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Uni<RestResponse<ApiResponse<Object>>> insert(TaskRequest.insert request) {
-        Integer userId = Integer.valueOf(jwt.getClaim("userId").toString());
-
-        return taskService.create(userId, request)
+        return Uni.createFrom().item(() -> {
+            return Integer.valueOf(jwt.getClaim("userId").toString());
+        }).runSubscriptionOn(Infrastructure.getDefaultExecutor())
+                .flatMap(userId -> taskService.create(userId, request))
                 .map(taskId -> {
                     ApiResponse<Object> response = ApiResponse.success(
                             Response.Status.CREATED.getStatusCode(),
@@ -54,15 +59,17 @@ public class TaskController {
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<RestResponse<ApiResponse<Object>>> get(@PathParam("id") String id) {
-        Integer userId = Integer.valueOf(jwt.getClaim("userId").toString());
         Integer taskId = Integer.valueOf(id);
+        return Uni.createFrom().item(() -> {
+            return Integer.valueOf(jwt.getClaim("userId").toString());
 
-        return taskService.task(taskId, userId)
-                .map(task -> {
+        }).runSubscriptionOn(Infrastructure.getDefaultExecutor())
+                .flatMap(userId -> taskService.task(taskId, userId))
+                .map(result -> {
                     ApiResponse<Object> response = ApiResponse.success(
                             Response.Status.OK.getStatusCode(),
                             "success get task",
-                            task);
+                            result);
                     return RestResponse.status(Response.Status.OK, response);
                 });
     }
@@ -71,14 +78,57 @@ public class TaskController {
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<RestResponse<ApiResponse<Object>>> getAll() {
-        Integer userId = Integer.valueOf(jwt.getClaim("userId").toString());
-
-        return taskService.tasks(userId)
-                .map(tasks -> {
+        return Uni.createFrom().item(() -> {
+            return Integer.valueOf(jwt.getClaim("userId").toString());
+        }).runSubscriptionOn(Infrastructure.getDefaultExecutor())
+                .flatMap(userId -> taskService.tasks(userId))
+                .map(result -> {
                     ApiResponse<Object> response = ApiResponse.success(
                             Response.Status.OK.getStatusCode(),
                             "success get tasks",
-                            tasks);
+                            result);
+                    return RestResponse.status(Response.Status.OK, response);
+                });
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> delete(@PathParam("id") String id) {
+        Integer taskId = Integer.valueOf(id);
+        return Uni.createFrom().item(() -> {
+            return Integer.valueOf(jwt.getClaim("userId").toString());
+
+        }).runSubscriptionOn(Infrastructure.getDefaultExecutor())
+                .flatMap(userId -> taskService.delete(taskId, userId))
+                .map(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.OK.getStatusCode(),
+                            "success delete task",
+                            result);
+                    return RestResponse.status(Response.Status.OK, response);
+                });
+    }
+
+    @PATCH
+    @Path("/{id}")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> updateStatus(@PathParam("id") String id,
+            @QueryParam("status") String status) {
+        Integer taskId = Integer.valueOf(id);
+
+        return Uni.createFrom().item(() -> {
+            return Integer.valueOf(jwt.getClaim("userId").toString());
+
+        }).runSubscriptionOn(Infrastructure.getDefaultExecutor())
+                .flatMap(userId -> taskService.updateStatus(taskId, userId, status))
+                .map(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.OK.getStatusCode(),
+                            "success update status task",
+                            result);
                     return RestResponse.status(Response.Status.OK, response);
                 });
     }

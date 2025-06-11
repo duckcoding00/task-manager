@@ -44,19 +44,19 @@
 		>
 			{#each tasks as task (task.id)}
 				<Card
-					class="h-60 w-full max-w-sm border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+					class="h-60 w-full max-w-sm  transition-all duration-300 hover:scale-105 hover:shadow-2xl"
 				>
-					<div class="flex h-full flex-col p-2">
+					<div class="flex h-full flex-col p-4">
 						<div class="mb-4 flex-none">
 							<h1
-								class="line-clamp-2 text-xl leading-tight font-bold text-white transition-colors duration-200 hover:text-blue-300"
+								class="line-clamp-2 text-xl leading-tight font-bold text-black transition-colors duration-200 hover:text-blue-300"
 							>
 								<a href="/task/{task.id}" class="hover:underline">{task.title}</a>
 							</h1>
 						</div>
 
 						<div class="mb-4 flex-1">
-							<p class="line-clamp-4 text-sm leading-relaxed text-slate-300">
+							<p class="line-clamp-4 text-sm leading-relaxed text-black">
 								{task.description}
 							</p>
 						</div>
@@ -72,7 +72,7 @@
 								</span>
 
 								<time
-									class="rounded-md bg-slate-700/50 px-2 py-1 text-xs font-medium text-slate-400"
+									class="rounded-md bg-slate-700/50 px-2 py-1 text-xs font-medium text-white"
 									datetime={task.due_dated_at}
 								>
 									📅 {formatDate(task.due_dated_at)}

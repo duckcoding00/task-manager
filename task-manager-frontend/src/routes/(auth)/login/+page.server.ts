@@ -37,14 +37,8 @@ export const actions: Actions = {
 				body: body
 			});
 
-			console.log('Response status:', response.status);
-			console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
 			const contentType = response.headers.get('content-type');
 			const contentLength = response.headers.get('content-length');
-
-			console.log('Content-Type:', contentType);
-			console.log('Content-Length:', contentLength);
 
 			let result;
 
@@ -86,15 +80,6 @@ export const actions: Actions = {
 				const accessToken = result.data?.access_token || result.access_token || result.token;
 
 				if (accessToken) {
-					// prod
-					// cookies.set('access_token', accessToken, {
-					// 	path: '/',
-					// 	httpOnly: true,
-					// 	sameSite: 'strict',
-					// 	maxAge: 60 * 60 * 24 * 7
-					// });
-
-					// dev
 					cookies.set('access_token', accessToken, {
 						path: '/',
 						httpOnly: true,
