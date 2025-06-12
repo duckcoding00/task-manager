@@ -2,7 +2,11 @@ import { fail, isRedirect, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load = (async () => {
-	return {};
+	return {
+		title: 'Register Page',
+		description:
+			'Register new task manager account. Enter your username and password to sign up and manage your tasks, projects, and deadlines.'
+	};
 }) satisfies PageServerLoad;
 
 export const actions: Actions = {

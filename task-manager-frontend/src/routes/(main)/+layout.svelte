@@ -85,9 +85,9 @@
 </script>
 
 {#if page.url.pathname !== '/register' && page.url.pathname !== '/login'}
-	<Navbar>
+	<Navbar class="bg-neutral-100">
 		<NavBrand>
-			<p>Task Manager</p>
+			<a href="/"><span class="text-1xl">Task Manager</span></a>
 		</NavBrand>
 		<div class="order-2 flex items-center gap-1">
 			{#if data.isAuth}
@@ -115,7 +115,7 @@
 		<NavUl class="order-1">
 			<NavLi href="/">Home</NavLi>
 			{#if data.isAuth}
-				<NavLi href="/task">Tasks</NavLi>
+				<NavLi href="/task" data-sveltekit-preload-data="hover">Tasks</NavLi>
 			{/if}
 		</NavUl>
 	</Navbar>
@@ -159,6 +159,7 @@
 							id="modal-username"
 							value={form?.username?.toString() || ''}
 							disabled={loading}
+							color="gray"
 						/>
 					</label>
 					<label for="modal-password" class="space-y-2">
@@ -171,6 +172,7 @@
 							id="modal-password"
 							value={form?.password?.toString() || ''}
 							disabled={loading}
+							color="gray"
 						/>
 					</label>
 					<div class="flex items-start">

@@ -3,7 +3,11 @@ import type { PageServerLoad } from './$types';
 import { fail, isRedirect, redirect } from '@sveltejs/kit';
 
 export const load = (async () => {
-	return {};
+	return {
+		title: 'Login Page',
+		description:
+			'Access your task manager account. Enter your username and password to log in and manage your tasks, projects, and deadlines.'
+	};
 }) satisfies PageServerLoad;
 
 export const actions: Actions = {
@@ -78,11 +82,21 @@ export const actions: Actions = {
 				console.log('Login successful, setting cookies and redirecting...');
 
 				const accessToken = result.data?.access_token || result.access_token || result.token;
-
+				const username = result.data?.username || result.username;
 				if (accessToken) {
 					cookies.set('access_token', accessToken, {
 						path: '/',
 						httpOnly: true,
+						sameSite: 'lax',
+						secure: false,
+						maxAge: 60 * 60 * 24 * 7
+					});
+				}
+
+				if (username) {
+					cookies.set('username', username, {
+						path: '/',
+						httpOnly: false,
 						sameSite: 'lax',
 						secure: false,
 						maxAge: 60 * 60 * 24 * 7

@@ -49,6 +49,11 @@ public class TaskRepository {
             update tasks set status = $1, updated_at = $2 where id = $3
             """;
 
+    private static final String UPDATE_TASK = """
+            update tasks set title = $1, description = $2, duedated_at = $3, updated_at = $4 where id = $5
+            returning id
+            """;
+
     // mapping
     private TaskEntity mappingEntity(Row row) {
         TaskEntity task = new TaskEntity();
@@ -147,5 +152,22 @@ public class TaskRepository {
 
     public Uni<Void> updateStatus(Integer id, String status) {
         return client.withConnection(conn -> updateStatus(id, status, conn));
+    }
+
+    public Uni<Integer> updateTask(TaskEntity task, SqlConnection conn) {
+        OffsetDateTime now = OffsetDateTime.now();
+
+        return conn.preparedQuery(UPDATE_TASK)
+                .execute(Tuple.of(task.getTitle(), task.getDescription(), task.getDuedatedAt(), now, task.getId()))
+                .onItem().transform(rows -> {
+                    return rows.iterator().next().getInteger("id");
+                })
+                .onFailure().invoke(throwable -> {
+                    log.errorf("failed to update task [ID: %id] : %s", task.getId(), throwable.getMessage());
+                });
+    }
+
+    public Uni<Integer> updateTask(TaskEntity task) {
+        return client.withConnection(conn -> updateTask(task, conn));
     }
 }

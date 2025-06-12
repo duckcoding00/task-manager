@@ -88,10 +88,24 @@
 						</Alert>
 					{/if}
 					<label for="username" class="space-y-2">
-						<Input type="text" name="username" placeholder="username" required id="username" />
+						<Input
+							type="text"
+							name="username"
+							placeholder="username"
+							required
+							id="username"
+							color="gray"
+						/>
 					</label>
 					<label for="password" class="space-y-2">
-						<Input type="password" name="password" placeholder="password" required id="password" />
+						<Input
+							type="password"
+							name="password"
+							placeholder="password"
+							required
+							id="password"
+							color="gray"
+						/>
 					</label>
 
 					<Button type="submit" class="w-full" color="dark">register account</Button>

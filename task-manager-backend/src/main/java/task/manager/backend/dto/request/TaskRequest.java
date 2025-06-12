@@ -17,4 +17,12 @@ public class TaskRequest {
 
             @JsonProperty("due_date") @NotNull(message = "due_date is required") OffsetDateTime dueDate) {
     }
+
+    public record update(
+            String title,
+
+            String description,
+
+            @JsonProperty("due_date") OffsetDateTime dueDate) {
+    }
 }

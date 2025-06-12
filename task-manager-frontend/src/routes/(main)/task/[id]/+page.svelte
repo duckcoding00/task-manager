@@ -1,13 +1,28 @@
 <script lang="ts">
-	import { Alert, Button, Card, Dropdown, DropdownItem, Modal } from 'flowbite-svelte';
+	import {
+		Alert,
+		Button,
+		Card,
+		Datepicker,
+		Dropdown,
+		DropdownItem,
+		Input,
+		Label,
+		Modal,
+		Textarea
+	} from 'flowbite-svelte';
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { slide } from 'svelte/transition';
+	import { formatToISO } from '$lib/utils/formatDate';
+	import { Section } from 'flowbite-svelte-blocks';
 
 	let { data }: { data: PageData } = $props();
 	let task = $state(data.task);
 	let isExpanded = $state(false);
 	let modal = $state(false);
+	let updateModal = $state(false);
 
 	// Simple check based on character length
 	let showReadMore = $derived.by(() => (task?.description?.length || 0) > 100);
@@ -81,7 +96,6 @@
 		return async ({ result, update, formData }) => {
 			loading = false;
 			if (result.type === 'success') {
-				// Update state lokal agar UI langsung berubah tanpa reload manual
 				taskStatus = formData.get('status') as string;
 				await invalidateAll();
 				await update();
@@ -102,11 +116,43 @@
 			LoadingDelete = false;
 
 			if (result.type === 'redirect') {
-				await delay(2000); // delay 2 detik
+				await delay(1500);
 				await invalidateAll();
 				goto(result.location);
 			}
 		};
+	}
+
+	let loadingUpdate = $state(false);
+	let successMessage = $state('');
+	function updateEnhance() {
+		loadingUpdate = true;
+		successMessage = '';
+
+		return async ({ result, update }) => {
+			loadingUpdate = false;
+			if (result.type === 'success') {
+				successMessage = 'Success Update Task, redirecting...';
+				await invalidateAll();
+
+				setTimeout(() => {
+					updateModal = false;
+					successMessage = '';
+					location.reload();
+				}, 1000);
+				return;
+			}
+
+			await update();
+		};
+	}
+
+	// Tambahkan state untuk date picker
+	let selectedDate = $state(task?.due_dated_at ? new Date(task.due_dated_at) : undefined);
+
+	// Function untuk handle perubahan date
+	function handleDateChange(event: CustomEvent) {
+		selectedDate = event.detail;
 	}
 </script>
 
@@ -224,6 +270,9 @@
 						<Button
 							color="light"
 							class="border-slate-600 bg-gray-800 text-white transition-all duration-200 hover:bg-gray-900 hover:text-gray-300"
+							onclick={() => {
+								updateModal = true;
+							}}
 						>
 							<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path
@@ -260,47 +309,25 @@
 	</Card>
 </div>
 
-<Modal bind:open={modal} size="sm" class="w-full">
-	{#snippet header()}
-		<div class="flex items-center gap-3">
-			<div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-				<svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-					></path>
-				</svg>
-			</div>
-			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete Task</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">This action cannot be undone</p>
-			</div>
-		</div>
-	{/snippet}
-
-	<div class="space-y-4">
-		<p class="text-sm text-gray-600 dark:text-gray-300">
-			Are you sure you want to delete "<span class="font-semibold">{task?.title}</span>"? This will
-			permanently remove the task and all associated data.
+<Section sectionClass="h-96">
+	<Modal title="" bind:open={modal} autoclose size="sm" class="w-full">
+		<svg
+			class="mx-auto mb-3.5 h-11 w-11 text-gray-400 dark:text-gray-500"
+			aria-hidden="true"
+			fill="currentColor"
+			viewBox="0 0 20 20"
+			xmlns="http://www.w3.org/2000/svg"
+			><path
+				fill-rule="evenodd"
+				d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+				clip-rule="evenodd"
+			/></svg
+		>
+		<p class="mb-4 text-center text-gray-500 dark:text-gray-300">
+			Are you sure you want to delete this Task {task?.title}?
 		</p>
-
-		<Alert class="border-red-200 bg-red-50 text-red-800">
-			<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-				<path
-					fill-rule="evenodd"
-					d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-					clip-rule="evenodd"
-				></path>
-			</svg>
-			<span class="font-medium">Warning!</span> This action is permanent and cannot be reversed.
-		</Alert>
-	</div>
-
-	{#snippet footer()}
-		<div class="flex justify-end gap-3">
-			<Button color="alternative" onclick={() => (modal = false)}>Cancel</Button>
+		<div class="flex items-center justify-center space-x-4">
+			<Button color="light" onclick={() => (modal = false)}>No, Cancel</Button>
 			<form action="?/delete" method="post" use:enhance={deleteEnhance}>
 				<input type="hidden" name="id" value={task?.id} />
 				<Button color="red" type="submit" disabled={LoadingDelete}>
@@ -312,9 +339,85 @@
 							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
 						></path>
 					</svg>
-					{LoadingDelete ? 'Redirecting....' : 'Delete Task'}
+					{LoadingDelete ? 'Redirecting....' : `Yes, I'm sure`}
 				</Button>
 			</form>
 		</div>
-	{/snippet}
+	</Modal>
+</Section>
+
+<Modal bind:open={updateModal} autoclose={false} size="md" transition={slide}>
+	<div class="flex justify-center">
+		<Card class="max-w-full rounded-none border-none p-4 shadow-none sm:p-6 md:p-8">
+			<form
+				class="flex flex-col space-y-6"
+				method="POST"
+				use:enhance={updateEnhance}
+				action="?/updateTask"
+			>
+				<Input type="hidden" name="taskId" value={task?.id} />
+				<h3 class="text-xl font-bold text-gray-900 dark:text-white">Update Task</h3>
+
+				<Label for="title">
+					<span>Title</span>
+					<Input
+						value={task?.title}
+						type="text"
+						name="title"
+						placeholder="Task title"
+						id="title"
+						color="gray"
+						required
+						disabled={loadingUpdate}
+					/>
+				</Label>
+
+				<Label for="description">
+					<span>Description</span>
+					<Textarea
+						value={task?.description}
+						id="description"
+						placeholder="Task description"
+						color="gray"
+						rows={4}
+						name="description"
+						disabled={loadingUpdate}
+					/>
+				</Label>
+
+				<Label for="date">
+					<span>Due Date</span>
+					<Datepicker
+						bind:value={selectedDate}
+						color="gray"
+						id="datepicker"
+						disabled={loadingUpdate}
+					/>
+					<Input
+						type="hidden"
+						name="date"
+						value={selectedDate ? formatToISO(selectedDate.toISOString()) : ''}
+					/>
+				</Label>
+
+				<div class="flex gap-3">
+					<Button
+						type="submit"
+						class="flex-1 bg-gray-700 text-white hover:bg-gray-900"
+						disabled={loadingUpdate}
+					>
+						{loadingUpdate ? 'Updating...' : 'Update Task'}
+					</Button>
+					<Button
+						color="alternative"
+						onclick={() => (updateModal = false)}
+						disabled={loadingUpdate}
+						type="button"
+					>
+						Cancel
+					</Button>
+				</div>
+			</form>
+		</Card>
+	</div>
 </Modal>

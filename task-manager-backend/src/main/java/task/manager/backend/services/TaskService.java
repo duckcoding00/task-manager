@@ -105,7 +105,7 @@ public class TaskService {
 
                     return task.getId();
                 })
-                .flatMap(validTaskId -> taskRepository.deletedByID(validTaskId))
+                .flatMap(existingTaskId -> taskRepository.deletedByID(existingTaskId))
                 .onFailure(NotFoundException.class).invoke(ex -> {
                     log.errorf("Task not found for deletion [ID: %s]", taskId);
                 })
@@ -137,7 +137,7 @@ public class TaskService {
 
                     return task.getId();
                 })
-                .flatMap(validTaskId -> taskRepository.updateStatus(validTaskId, status))
+                .flatMap(existingTaskId -> taskRepository.updateStatus(existingTaskId, status))
                 .onFailure(NotFoundException.class).invoke(ex -> {
                     log.errorf("Task not found for update [ID: %s]", taskId);
                 })
@@ -152,5 +152,50 @@ public class TaskService {
                 .transform(throwable -> {
                     return new RuntimeException("Failed to update task: " + throwable.getMessage(), throwable);
                 });
+    }
+
+    public Uni<Integer> updateTask(Integer taskId, Integer userId, TaskRequest.update request) {
+        return taskRepository.get(taskId)
+                .onItem().transform(existingTask -> {
+                    if (existingTask == null) {
+                        throw new NotFoundException("task not found");
+                    }
+
+                    if (!existingTask.getUserId().equals(userId)) {
+                        throw new UnauthorizedException("access denied");
+                    }
+
+                    updateField(existingTask, request);
+
+                    return existingTask;
+                })
+                .flatMap(taskRepository::updateTask)
+                .onFailure(NotFoundException.class).invoke(ex -> {
+                    log.errorf("Task not found for update [ID: %s]", taskId);
+                })
+                .onFailure(UnauthorizedException.class).invoke(ex -> {
+                    log.errorf("Unauthorized update attempt [TaskID: %s, UserID: %s]", taskId, userId);
+                })
+                .onFailure(throwable -> !(throwable instanceof NotFoundException)
+                        && !(throwable instanceof UnauthorizedException))
+                .transform(throwable -> {
+                    return new RuntimeException("Failed to update task: " + throwable.getMessage(), throwable);
+                });
+    }
+
+    private void updateField(TaskEntity exsitingTask, TaskRequest.update request) {
+        if (request.title() != null) {
+            String trimTitle = request.title().trim();
+            if (!trimTitle.isEmpty()) {
+                exsitingTask.setTitle(trimTitle);
+            }
+        }
+
+        if (request.description() != null) {
+            exsitingTask.setDescription(request.description().trim());
+        }
+        if (request.dueDate() != null) {
+            exsitingTask.setDuedatedAt(request.dueDate());
+        }
     }
 }

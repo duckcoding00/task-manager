@@ -21,7 +21,9 @@ export const load = (async ({ fetch }) => {
 		if ('data' in result) {
 			return {
 				tasks: result.data,
-				errors: null
+				errors: null,
+				title: 'Tasks',
+				description: 'Create and manage your daily tasks with ease'
 			};
 		}
 
@@ -38,12 +40,15 @@ export const actions: Actions = {
 
 		const title = form.get('title') as string;
 		const description = form.get('description') as string;
-		const due_date_at = form.get('due-date') as string;
+		//const due_date_at = form.get('due-date') as string;
+		const date = form.get('date') as string;
+
+		console.log(JSON.stringify({ date: date }));
 
 		const body = JSON.stringify({
 			title: title,
 			description: description,
-			due_date: due_date_at
+			due_date: date
 		});
 
 		console.log(body);

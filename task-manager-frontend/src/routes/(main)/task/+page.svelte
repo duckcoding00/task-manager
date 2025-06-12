@@ -51,7 +51,11 @@
 							<h1
 								class="line-clamp-2 text-xl leading-tight font-bold text-black transition-colors duration-200 hover:text-blue-300"
 							>
-								<a href="/task/{task.id}" class="hover:underline">{task.title}</a>
+								<a
+									href="/task/{task.id}"
+									class="hover:underline"
+									data-sveltekit-preload-data="hover">{task.title}</a
+								>
 							</h1>
 						</div>
 

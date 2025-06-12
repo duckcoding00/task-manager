@@ -24,3 +24,12 @@ export interface SingleTaskResponse {
 export interface TaskErrorResponse {
 	errors: string[];
 }
+
+export interface ErrorResponse {
+	status_code: number;
+	errors: string;
+	timestamp: string;
+	details: {
+		error: string;
+	};
+}

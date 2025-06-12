@@ -132,4 +132,23 @@ public class TaskController {
                     return RestResponse.status(Response.Status.OK, response);
                 });
     }
+
+    @PATCH
+    @Path("/{id}/update")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> updateTask(@PathParam("id") String id, TaskRequest.update request) {
+        Integer taskId = Integer.valueOf(id);
+        return Uni.createFrom().item(() -> {
+            return Integer.valueOf(jwt.getClaim("userId").toString());
+        }).runSubscriptionOn(Infrastructure.getDefaultExecutor())
+                .flatMap(userId -> taskService.updateTask(taskId, userId, request))
+                .map(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.OK.getStatusCode(),
+                            "success update task",
+                            result);
+                    return RestResponse.status(Response.Status.OK, response);
+                });
+    }
 }
