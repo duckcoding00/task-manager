@@ -12,6 +12,7 @@ import task.manager.backend.dto.response.UserResponse;
 import task.manager.backend.entity.UserEntity;
 import task.manager.backend.repositories.UserRepository;
 import task.manager.backend.utils.JWTUtils;
+import task.manager.backend.utils.exception.CustomException.InsertException;
 
 @ApplicationScoped
 public class UserService {
@@ -43,7 +44,7 @@ public class UserService {
                 })
                 .replaceWithVoid()
                 .onFailure().transform(throwable -> {
-                    return new RuntimeException("Failed to create user: " + throwable.getMessage(), throwable);
+                    return new InsertException("Failed to create user: " + throwable.getMessage(), throwable);
                 });
     }
 

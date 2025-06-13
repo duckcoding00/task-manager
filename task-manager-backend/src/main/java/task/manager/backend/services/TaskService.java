@@ -16,6 +16,7 @@ import task.manager.backend.dto.request.TaskRequest;
 import task.manager.backend.dto.response.TaskResponse;
 import task.manager.backend.entity.TaskEntity;
 import task.manager.backend.repositories.TaskRepository;
+import task.manager.backend.utils.exception.CustomException.InsertException;
 
 @ApplicationScoped
 public class TaskService {
@@ -36,7 +37,7 @@ public class TaskService {
         })
                 .flatMap(taskRepository::insert)
                 .onFailure().transform(throwable -> {
-                    return new RuntimeException("Failed to create task: " + throwable.getMessage(), throwable);
+                    return new InsertException("Failed to create task: " + throwable.getMessage(), throwable);
                 });
     }
 

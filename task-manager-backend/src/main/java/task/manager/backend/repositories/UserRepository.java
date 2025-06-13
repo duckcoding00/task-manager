@@ -17,11 +17,23 @@ public class UserRepository {
     @Inject
     Pool client;
 
+    private static final String INSERT_USER = """
+            insert into users(username, password)
+            values($1,$2)
+            """;
+
+    private static final String GET_BY_USERNAME = """
+            select id, username, password from users
+                where username = $1
+            """;
+
+    private static final String GET_BY_ID = """
+            select id, username, password from users
+                where id = $1
+            """;
+
     public Uni<UserEntity> insert(UserEntity user, SqlConnection conn) {
-        return conn.preparedQuery("""
-                insert into users(username, password)
-                values($1,$2)
-                """).execute(
+        return conn.preparedQuery(INSERT_USER).execute(
                 Tuple.tuple()
                         .addValue(user.getUsername())
                         .addValue(user.getPassword()))
@@ -37,10 +49,7 @@ public class UserRepository {
     }
 
     public Uni<UserEntity> get(String username, SqlConnection conn) {
-        return conn.preparedQuery("""
-                select id, username, password from users
-                where username = $1
-                """)
+        return conn.preparedQuery(GET_BY_USERNAME)
                 .execute(Tuple.of(username))
                 .onItem().transform(rows -> {
                     var iterator = rows.iterator();
@@ -64,4 +73,31 @@ public class UserRepository {
     public Uni<UserEntity> get(String username) {
         return client.withConnection(conn -> get(username, conn));
     }
+
+    public Uni<UserEntity> getById(Integer id, SqlConnection conn) {
+        return conn.preparedQuery(GET_BY_ID)
+                .execute(Tuple.of(id))
+                .onItem().transform(rows -> {
+                    var iterator = rows.iterator();
+                    if (iterator.hasNext()) {
+                        var row = iterator.next();
+                        UserEntity user = new UserEntity();
+                        user.setId(row.getInteger("id"));
+                        user.setUsername(row.getString("username"));
+                        user.setPassword(row.getString("password"));
+
+                        return user;
+                    }
+
+                    return null;
+                })
+                .onFailure().invoke(throwable -> {
+                    log.error("failed get user : ", throwable);
+                });
+    }
+
+    public Uni<UserEntity> getById(Integer id) {
+        return client.withConnection(conn -> getById(id, conn));
+    }
+
 }

@@ -16,6 +16,7 @@ import jakarta.validation.ValidationException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import task.manager.backend.utils.ApiResponse;
+import task.manager.backend.utils.exception.CustomException.InsertException;
 
 @ApplicationScoped
 public class GlobalException {
@@ -87,4 +88,16 @@ public class GlobalException {
 
                 return Uni.createFrom().item(RestResponse.status(Response.Status.BAD_REQUEST, error));
         }
+
+        @ServerExceptionMapper
+        public Uni<RestResponse<ApiResponse<Object>>> handleInsertException(InsertException e) {
+                Map<String, Object> errors = Map.of(
+                                "error", e.getMessage() != null ? e.getMessage() : "INSERT ERROR");
+
+                ApiResponse<Object> error = ApiResponse.error(Response.Status.BAD_REQUEST.getStatusCode(),
+                                "INSERT_ERROR", errors);
+
+                return Uni.createFrom().item(RestResponse.status(Response.Status.BAD_REQUEST, error));
+        }
+
 }
