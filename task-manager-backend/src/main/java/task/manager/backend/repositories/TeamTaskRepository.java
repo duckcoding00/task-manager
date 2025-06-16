@@ -29,9 +29,15 @@ public class TeamTaskRepository {
             """;
 
     private static final String GET_TASKS = """
-            select (id, title, description, status, priority, due_date)
+            select id, title, description, status, priority, due_date, created_by, created_at, updated_at
             from team_tasks
             where project_id = $1
+            """;
+
+    private static final String GET_TASK_BY_ID = """
+            select id, title, description, status, priority, due_date, created_by, created_at, updated_at
+            from team_tasks
+            where id = $1
             """;
 
     private TeamTaskEntity mapping(Row row) {
@@ -42,6 +48,9 @@ public class TeamTaskRepository {
         tasks.setStatus(row.getString("status"));
         tasks.setPriority(row.getString("priority"));
         tasks.setDueDate(row.getLocalDate("due_date"));
+        tasks.setCreatedBy(row.getString("created_by"));
+        tasks.setCreatedAt(row.getLocalDateTime("created_at"));
+        tasks.setUpdatedAt(row.getLocalDateTime("updated_at"));
 
         return tasks;
     }
@@ -88,5 +97,21 @@ public class TeamTaskRepository {
 
     public Uni<List<TeamTaskEntity>> getTasks(Integer projectId) {
         return client.withConnection(conn -> getTasks(projectId, conn));
+    }
+
+    public Uni<TeamTaskEntity> getTask(Integer taskId, SqlConnection conn) {
+        return conn.preparedQuery(GET_TASK_BY_ID)
+                .execute(Tuple.of(taskId))
+                .onItem().transform(rows -> {
+                    var iterator = rows.iterator();
+                    return iterator.hasNext() ? mapping(iterator.next()) : null;
+                })
+                .onFailure().invoke(throwable -> {
+                    log.errorf("failed to get task [TaskID: %d]: %s", taskId, throwable.getMessage());
+                });
+    }
+
+    public Uni<TeamTaskEntity> getTask(Integer taskId) {
+        return client.withConnection(conn -> getTask(taskId, conn));
     }
 }

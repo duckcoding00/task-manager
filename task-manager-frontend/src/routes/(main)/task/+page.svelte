@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Card } from 'flowbite-svelte';
 	import type { PageData } from './$types';
+	import { getStatusClass, getStatusLabel, getStatusStyle } from '$lib/utils/label';
 
 	let { data }: { data: PageData } = $props();
 
@@ -15,25 +16,6 @@
 			minute: '2-digit',
 			hour12: true
 		});
-	}
-
-	function getStatusStyle(status: string) {
-		switch (status) {
-			case 'todo':
-				return 'bg-red-100 text-red-800 border-red-200';
-			case 'in_progress':
-				return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-			case 'completed':
-				return 'bg-green-100 text-green-800 border-green-200';
-			case 'canceled':
-				return 'bg-red-400 text-red-800 border-red-600';
-			default:
-				return 'bg-gray-100 text-gray-800 border-gray-200';
-		}
-	}
-
-	function getStatusLabel(status: string) {
-		return status.replace('_', ' ').toUpperCase();
 	}
 </script>
 

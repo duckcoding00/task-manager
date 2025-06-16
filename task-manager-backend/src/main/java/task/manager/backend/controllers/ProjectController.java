@@ -11,7 +11,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
+//import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -55,26 +55,27 @@ public class ProjectController {
                 .flatMap(id -> projectService.getProjects(id))
                 .map(result -> {
                     ApiResponse<Object> response = ApiResponse.success(
-                            Response.Status.CREATED.getStatusCode(),
-                            "success insert task",
+                            Response.Status.OK.getStatusCode(),
+                            "success get tasks",
                             result);
-                    return RestResponse.status(Response.Status.CREATED, response);
+                    return RestResponse.status(Response.Status.OK, response);
                 });
     }
 
-    @GET
-    @Authenticated
-    @Path("/{id}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Uni<RestResponse<ApiResponse<Object>>> getProject(@PathParam("id") String id) {
-        Integer projectID = Integer.valueOf(id);
-        return projectService.project(projectID)
-                .onItem().transform(result -> {
-                    ApiResponse<Object> response = ApiResponse.success(
-                            Response.Status.CREATED.getStatusCode(),
-                            "success insert task",
-                            result);
-                    return RestResponse.status(Response.Status.CREATED, response);
-                });
-    }
+    // @GET
+    // @Authenticated
+    // @Path("/{id}")
+    // @Produces(MediaType.APPLICATION_JSON)
+    // public Uni<RestResponse<ApiResponse<Object>>> getProject(@PathParam("id")
+    // String id) {
+    // Integer projectID = Integer.valueOf(id);
+    // return projectService.project(projectID)
+    // .onItem().transform(result -> {
+    // ApiResponse<Object> response = ApiResponse.success(
+    // Response.Status.CREATED.getStatusCode(),
+    // "success insert task",
+    // result);
+    // return RestResponse.status(Response.Status.CREATED, response);
+    // });
+    // }
 }

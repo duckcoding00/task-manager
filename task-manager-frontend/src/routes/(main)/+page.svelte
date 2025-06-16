@@ -21,8 +21,8 @@
 			<a href="/task">
 				<Button size="lg" color="gray">Add New Task</Button>
 			</a>
-			<a href="/task">
-				<Button size="lg" color="light">Browse Tasks</Button>
+			<a href="/teams">
+				<Button size="lg" color="light">Team Project?</Button>
 			</a>
 		</div>
 	</Section>

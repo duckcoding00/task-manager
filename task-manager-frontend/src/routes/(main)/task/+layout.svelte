@@ -99,12 +99,18 @@
 	{#if page.url.pathname === '/task'}
 		<div class="fixed right-6 bottom-6 z-50">
 			<Button
-				class="h-14 w-14 rounded-full bg-gray-600 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-gray-700 hover:shadow-xl"
+				class="group h-14 w-14 rounded-full bg-gray-600 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-gray-700 hover:shadow-xl focus:ring-4 focus:ring-gray-300"
 				onclick={() => {
 					modal = true;
 				}}
+				aria-label="Create new project"
 			>
-				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg
+					class="h-6 w-6 transition-transform group-hover:rotate-90"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"
 					></path>
 				</svg>
@@ -115,14 +121,18 @@
 	<Modal bind:open={modal} autoclose={false} size="md" transition={slide}>
 		<div class="flex justify-center">
 			<Card class="max-w-full rounded-none border-none p-4 shadow-none sm:p-6 md:p-8">
+				<div class="mb-6 border-b border-gray-200 pb-4 dark:border-gray-600">
+					<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create New Task</h3>
+					<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+						Set up a new task with timeline and description
+					</p>
+				</div>
 				<form
 					class="flex flex-col space-y-6"
 					action="?/create&redirectTo={page.url.pathname}"
 					method="POST"
 					use:enhance={customEnhance}
 				>
-					<h3 class="text-xl font-bold text-gray-900 dark:text-white">Create New Task</h3>
-
 					{#if errorMessages.length > 0}
 						<Alert color="red">
 							<List>
@@ -139,35 +149,47 @@
 						</Alert>
 					{/if}
 
-					<Label for="title">
-						<span>Title</span>
+					<div class="space-y-2">
+						<Label for="project-name" class="text-sm font-medium text-gray-900 dark:text-white">
+							Project Name *
+						</Label>
 						<Input
 							bind:value={title}
 							type="text"
 							name="title"
-							placeholder="Task title"
+							placeholder="Task title...."
 							id="title"
 							color="gray"
 							required
 							disabled={loading}
 						/>
-					</Label>
-
-					<Label for="description">
-						<span>Description</span>
+					</div>
+					<div class="space-y-2">
+						<Label
+							for="project-description"
+							class="text-sm font-medium text-gray-900 dark:text-white"
+						>
+							Description
+						</Label>
 						<Textarea
 							bind:value={description}
 							id="description"
-							placeholder="Task description"
+							placeholder="Task description...."
 							color="gray"
 							rows={4}
 							name="description"
 							disabled={loading}
+							class="resize-none transition-colors focus:ring-2"
 						/>
-					</Label>
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							Optional: Help your team understand the project goals
+						</p>
+					</div>
 
-					<label for="date">
-						<span>Date</span>
+					<div class="space-y-2">
+						<Label class="text-sm font-medium text-gray-900 dark:text-white">
+							Project Timeline *
+						</Label>
 						<Datepicker bind:value={date} color="gray" id="date" />
 						<input
 							type="hidden"
@@ -175,17 +197,54 @@
 							id="date"
 							value={date ? formatToISO(date.toString()) : ''}
 						/>
-					</label>
+					</div>
 
-					<div class="flex gap-3">
+					<div class="flex flex-col gap-3 pt-4 sm:flex-row-reverse">
 						<Button
 							type="submit"
-							class="flex-1 bg-gray-700 text-white hover:bg-gray-900"
+							color="gray"
 							disabled={loading}
+							class="flex-1 bg-gray-700 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:flex-none"
 						>
-							{loading ? 'Creating...' : 'Create Task'}
+							{#if loading}
+								<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								Creating Project...
+							{:else}
+								<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 4v16m8-8H4"
+									></path>
+								</svg>
+								Create Project
+							{/if}
 						</Button>
-						<Button color="alternative" onclick={resetForm} disabled={loading}>Cancel</Button>
+
+						<Button
+							type="button"
+							color="alternative"
+							onclick={resetForm}
+							disabled={loading}
+							class="flex-1 sm:w-auto sm:flex-none"
+						>
+							Cancel
+						</Button>
 					</div>
 				</form>
 			</Card>

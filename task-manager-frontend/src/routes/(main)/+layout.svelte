@@ -116,6 +116,7 @@
 			<NavLi href="/">Home</NavLi>
 			{#if data.isAuth}
 				<NavLi href="/task" data-sveltekit-preload-data="hover">Tasks</NavLi>
+				<NavLi href="/teams" data-sveltekit-preload-data="hover">Teams</NavLi>
 			{/if}
 		</NavUl>
 	</Navbar>
