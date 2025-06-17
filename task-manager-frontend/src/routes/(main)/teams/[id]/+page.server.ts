@@ -21,6 +21,7 @@ export const load = (async ({ fetch, params }) => {
 		if ('data' in result) {
 			return {
 				project: result.data.project,
+				members: result.data.members,
 				tasks: result.data.tasks,
 				title: result.data.project.name,
 				description: result.data.project.description
@@ -62,22 +63,75 @@ export const actions: Actions = {
 			const result = await response.json();
 
 			if (!response.ok) {
-				if (result.errors === 'VALIDATION_ERROR' && result.details?.validations) {
-					const validations: string[] = result.details?.validations;
+				if (result.errors === 'VALIDATION_ERROR') {
+					let validations: string[] = [];
+
+					if (result.details?.validations && Array.isArray(result.details.validations)) {
+						validations = result.details.validations;
+					} else if (result.details?.error && typeof result.details.error === 'string') {
+						validations = [result.details.error];
+					} else if (result.message) {
+						validations = [result.message];
+					}
 
 					return fail(400, {
 						validations,
-						message: validations.join(', ')
+						message: validations.join(', '),
+						type: 'validation_error'
 					});
 				}
 
-				return fail(response.status || 400, {
-					message: result.message || result.error || 'Insert failed',
-					backendError: result.errors || 'Unknown error'
+				return fail(response.status, {
+					message: result.message || result.error || 'Failed to create task',
+					backendError: result.errors || 'Unknown backend error',
+					type: 'backend_error'
 				});
 			}
 		} catch (error) {
 			console.log('Network or other error:', error);
+
+			return fail(500, {
+				type: 'network_error',
+				message: 'Cannot connect to server. Please check your connection.',
+				error: error instanceof Error ? error.message : 'Unknown network error'
+			});
+		}
+	},
+
+	archive: async ({ fetch, request }) => {
+		const form = await request.formData();
+		const id = form.get('id') as string;
+		const status = form.get('status') as string;
+
+		const body = JSON.stringify({
+			id,
+			status
+		});
+
+		console.log(body);
+		try {
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${id}/archive/?status=${status}`,
+				{
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
+				}
+			);
+
+			const result = await response.json();
+			console.log(result);
+			if (!response.ok) {
+				return fail(response.status, {
+					message: result.message || result.error || 'Failed to create task',
+					backendError: result.errors || 'Unknown backend error',
+					type: 'backend_error'
+				});
+			}
+		} catch (err) {
+			console.log('Network or other error:', err);
 
 			return fail(500, {
 				type: 'network_error',

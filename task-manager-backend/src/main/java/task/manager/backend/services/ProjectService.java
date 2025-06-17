@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.jboss.logging.Logger;
 
+import io.quarkus.security.UnauthorizedException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.sqlclient.Pool;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -102,21 +103,23 @@ public class ProjectService {
                                 resultProject.getCreatedAt(),
                                 resultProject.getUpdatedAt());
 
-                        return teamTaskRepository.getTasks(projectID, conn)
-                                .onItem().transform(resultTask -> {
-                                    List<TeamTaskResponse.tasks> tasks = new ArrayList<>();
-                                    resultTask.forEach(row -> {
-                                        tasks.add(new TeamTaskResponse.tasks(
-                                                row.getId(),
-                                                row.getTitle(),
-                                                row.getDescription(),
-                                                row.getStatus(),
-                                                row.getPriority(),
-                                                row.getDueDate()));
-                                    });
-                                    return tasks;
-                                })
-                                .map(tasks -> new ProjectResponse.ProjectTasks(project, tasks));
+                        return projectMemberRepository.getMembers(projectID, conn)
+                                .flatMap(members -> {
+                                    return teamTaskRepository.getTasks(projectID, conn)
+                                            .map(resultTask -> {
+                                                List<TeamTaskResponse.tasks> tasks = new ArrayList<>();
+                                                resultTask.forEach(row -> {
+                                                    tasks.add(new TeamTaskResponse.tasks(
+                                                            row.getId(),
+                                                            row.getTitle(),
+                                                            row.getDescription(),
+                                                            row.getStatus(),
+                                                            row.getPriority(),
+                                                            row.getDueDate()));
+                                                });
+                                                return new ProjectResponse.ProjectTasks(project, members, tasks);
+                                            });
+                                });
                     });
         })
                 .onFailure(NotFoundException.class).invoke(ex -> {
@@ -127,4 +130,126 @@ public class ProjectService {
                     return new RuntimeException("Failed to get project details: " + throwable.getMessage(), throwable);
                 });
     }
+
+    private void updateField(ProjectEntity exisitingProject, ProjectRequest.update request) {
+        if (request.name() != null) {
+            String nameTrim = request.name().trim();
+            if (nameTrim != null) {
+                exisitingProject.setName(nameTrim);
+            }
+        }
+
+        if (request.description() != null) {
+            exisitingProject.setDescription(request.description());
+        }
+
+        if (request.startDate() != null) {
+            exisitingProject.setStartDate(request.startDate());
+        }
+
+        if (request.endDate() != null) {
+            exisitingProject.setEndDate(request.endDate());
+        }
+    }
+
+    public Uni<Void> updateProject(Integer userID, Integer projectID, ProjectRequest.update request) {
+        return client.withTransaction(conn -> {
+            return projectRepository.getById(projectID, conn)
+                    .onItem().ifNull()
+                    .failWith(() -> new NotFoundException(String.format("project not found with [ID:%s]", projectID)))
+                    .flatMap(project -> {
+                        return projectMemberRepository.getByUserIDAndProjectID(project.getId(), userID, conn)
+                                .onItem().ifNull()
+                                .failWith(() -> new NotFoundException(String.format(
+                                        "member not found with [ID:%s] at [ProjectID:%s]", userID, project.getId())))
+                                .flatMap(member -> {
+                                    if (member.level() < 3) {
+                                        throw new UnauthorizedException("access denied, must higher level access this");
+                                    }
+
+                                    updateField(project, request);
+
+                                    return projectRepository.updateProject(projectID, project, conn);
+                                });
+                    });
+        })
+                .onFailure(NotFoundException.class).invoke(ex -> {
+                    log.errorf("resource not found : %s", ex.getMessage());
+                })
+                .onFailure(UnauthorizedException.class).invoke(ex -> {
+                    log.errorf("%s", ex.getMessage());
+                })
+                .onFailure(throwable -> !(throwable instanceof NotFoundException)
+                        && !(throwable instanceof UnauthorizedException))
+                .transform(throwable -> {
+                    return new InsertException("Failed to update project: " + throwable.getMessage(), throwable);
+                });
+    }
+
+    public Uni<Void> deleteProject(Integer userID, Integer projectID) {
+        return client.withTransaction(conn -> {
+            return projectRepository.getById(projectID, conn)
+                    .onItem().ifNull()
+                    .failWith(() -> new NotFoundException(String.format("project not found with [ID:%s]", projectID)))
+                    .flatMap(project -> {
+                        return projectMemberRepository.getByUserIDAndProjectID(project.getId(), userID, conn)
+                                .onItem().ifNull()
+                                .failWith(() -> new NotFoundException(String.format(
+                                        "member not found with [ID:%s] at [ProjectID:%s]", userID, project.getId())))
+                                .flatMap(member -> {
+                                    if (member.level() < 3) {
+                                        throw new UnauthorizedException("access denied, must higher level access this");
+                                    }
+
+                                    return projectRepository.deleteProject(projectID, conn);
+                                });
+                    });
+        })
+                .onFailure(NotFoundException.class).invoke(ex -> {
+                    log.errorf("resource not found : %s", ex.getMessage());
+                })
+                .onFailure(UnauthorizedException.class).invoke(ex -> {
+                    log.errorf("%s", ex.getMessage());
+                })
+                .onFailure(throwable -> !(throwable instanceof NotFoundException)
+                        && !(throwable instanceof UnauthorizedException))
+                .transform(throwable -> {
+                    return new InsertException("Failed to delete project: " + throwable.getMessage(), throwable);
+                });
+
+    }
+
+    public Uni<Void> archive(Integer userID, Integer projectID, String status) {
+        return client.withTransaction(conn -> {
+            return projectRepository.getById(projectID, conn)
+                    .onItem().ifNull()
+                    .failWith(() -> new NotFoundException(String.format("project not found with [ID:%s]", projectID)))
+                    .flatMap(project -> {
+                        return projectMemberRepository.getByUserIDAndProjectID(project.getId(), userID, conn)
+                                .onItem().ifNull()
+                                .failWith(() -> new NotFoundException(String.format(
+                                        "member not found with [ID:%s] at [ProjectID:%s]", userID, project.getId())))
+                                .flatMap(member -> {
+                                    if (member.level() < 3) {
+                                        throw new UnauthorizedException("access denied, must higher level access this");
+                                    }
+
+                                    return projectRepository.archiveProject(projectID, status, conn);
+                                });
+                    });
+        })
+                .onFailure(NotFoundException.class).invoke(ex -> {
+                    log.errorf("resource not found : %s", ex.getMessage());
+                })
+                .onFailure(UnauthorizedException.class).invoke(ex -> {
+                    log.errorf("%s", ex.getMessage());
+                })
+                .onFailure(throwable -> !(throwable instanceof NotFoundException)
+                        && !(throwable instanceof UnauthorizedException))
+                .transform(throwable -> {
+                    return new InsertException("Failed to archive project: " + throwable.getMessage(), throwable);
+                });
+
+    }
+
 }

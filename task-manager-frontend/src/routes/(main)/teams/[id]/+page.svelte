@@ -19,6 +19,7 @@
 	import type { PageData } from './$types';
 	import { formatDate, formatToDateString, formatToISO } from '$lib/utils/formatDate';
 	import {
+		getLevelText,
 		getPriorityStyle,
 		getPriorityText,
 		getStatusClass,
@@ -29,12 +30,22 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { slide } from 'svelte/transition';
 	import { enhance } from '$app/forms';
+	import { Section } from 'flowbite-svelte-blocks';
 
 	let { data }: { data: PageData } = $props();
 	let project = $state(data.project);
 	let tasks = $state(data.tasks);
+	let members = $state(data.members);
 	let modal = $state(false);
-	console.log(project);
+	let modalArchive = $state(false);
+	let isArchived = $derived.by(() => {
+		if (project?.status === 'archive') {
+			return true;
+		}
+		return false;
+	});
+	let projectStatus = $state(project?.status);
+	console.log(members);
 
 	function formatRelativeDate(dateString: string): string {
 		const date = new Date(dateString);
@@ -117,31 +128,69 @@
 		date = undefined;
 		selected = '';
 	}
+
+	let loadingArchive = $state(false);
+	function archiveEnhanced() {
+		loadingArchive = true;
+
+		return async ({ result, update, formData }: any) => {
+			loadingArchive = false;
+			if (result.type === 'success') {
+				projectStatus = formData.get('status') as string;
+				isArchived = projectStatus === 'archive';
+				await invalidateAll();
+				await update();
+			}
+		};
+	}
 </script>
 
-<div class="container m-3 p-3 md:m-4 md:p-4">
+<div class="container m-3 border-b-1 border-b-gray-400 p-3 md:m-4 md:p-4">
 	<div class="mb-4 grid gap-6 md:grid-cols-2">
 		<div class="mb-10 text-center md:mb-8 md:text-left">
 			<Breadcrumb aria-label="Solid background breadcrumb example" class="mb-6 md:mb-4">
 				<BreadcrumbItem href="/teams" home>Teams</BreadcrumbItem>
 				<BreadcrumbItem href="#">{project?.name}</BreadcrumbItem>
 			</Breadcrumb>
-			<div class="mb-2 flex items-center justify-center gap-3 md:justify-start">
-				<h1 class="text-2xl font-bold text-gray-900 md:text-3xl dark:text-white">
-					{project?.name}
-				</h1>
-				<!-- Status Badge -->
-				<span
-					class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {getStatusClass(
-						project?.status || ''
-					)}"
-				>
-					{getStatusText(project?.status || '')}
-				</span>
+			<div class="space-y-4">
+				<div class="space-y-1">
+					<div class="mb-2 flex items-center justify-center gap-3 md:justify-start">
+						<h1 class="text-2xl font-bold text-gray-900 md:text-3xl dark:text-white">
+							{project?.name}
+						</h1>
+						<!-- Status Badge -->
+						<span
+							class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {getStatusClass(
+								projectStatus || ''
+							)}"
+						>
+							{getStatusText(projectStatus || '')}
+						</span>
+					</div>
+					<p class="text-lg text-gray-600 dark:text-gray-300">
+						{project?.description}
+					</p>
+				</div>
+				<div class="hidden md:block">
+					{#if members && members.length > 0}
+						<Card class="max-w-full border-none shadow-none">
+							{#each members as member (member.id)}
+								<div
+									class="flex items-center justify-between border-b-1 border-b-gray-400 text-gray-700"
+								>
+									<p>{member.username}</p>
+									<p>{getLevelText(member.level)}</p>
+									<p>{member.status}</p>
+									<p>{formatDate(member.joined_at)}</p>
+									{#if member.left_at}
+										<p>{member.left_at}</p>
+									{/if}
+								</div>
+							{/each}
+						</Card>
+					{/if}
+				</div>
 			</div>
-			<p class="text-lg text-gray-600 dark:text-gray-300">
-				{project?.description}
-			</p>
 		</div>
 		<div class="hidden md:block">
 			<div class="mb-8"></div>
@@ -218,24 +267,29 @@
 					<Card class="p-4">
 						<h3 class="mb-3 font-semibold text-gray-900 dark:text-white">Actions</h3>
 						<div class="space-y-2">
-							<button
+							<Button
 								class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+								disabled={isArchived}
 							>
 								Edit Project
-							</button>
-							<button
+							</Button>
+							<Button
 								class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
 								onclick={() => {
 									modal = true;
 								}}
+								disabled={isArchived}
 							>
 								Add Task
-							</button>
-							<button
+							</Button>
+							<Button
 								class="w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-600 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
+								onclick={() => {
+									modalArchive = true;
+								}}
 							>
-								Archive Project
-							</button>
+								{isArchived ? 'Active' : 'Archive'}
+							</Button>
 						</div>
 					</Card>
 				</div>
@@ -429,7 +483,7 @@
 									d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								></path>
 							</svg>
-							Creating Project...
+							Creating Task...
 						{:else}
 							<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path
@@ -439,7 +493,7 @@
 									d="M12 4v16m8-8H4"
 								></path>
 							</svg>
-							Create Project
+							Create Task
 						{/if}
 					</Button>
 
@@ -457,6 +511,44 @@
 		</Card>
 	</div>
 </Modal>
+
+<Section sectionClass="h-96">
+	<Modal title="" bind:open={modalArchive} autoclose size="sm" class="w-full">
+		<svg
+			class="mx-auto mb-3.5 h-11 w-11 text-gray-400 dark:text-gray-500"
+			aria-hidden="true"
+			fill="currentColor"
+			viewBox="0 0 20 20"
+			xmlns="http://www.w3.org/2000/svg"
+			><path
+				fill-rule="evenodd"
+				d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+				clip-rule="evenodd"
+			/></svg
+		>
+		<p class="mb-4 text-center text-gray-500 dark:text-gray-300">
+			Are you sure you want to {isArchived ? 'Active' : 'Archive'} this Project?
+		</p>
+		<div class="flex items-center justify-center space-x-4">
+			<Button color="light" onclick={() => (modalArchive = false)}>No, Cancel</Button>
+			<form action="?/archive" method="post" use:enhance={archiveEnhanced}>
+				<input type="hidden" name="id" value={project?.id} />
+				<input type="hidden" name="status" value={isArchived ? 'active' : 'archive'} />
+				<Button color={isArchived ? 'green' : 'red'} type="submit">
+					<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+						></path>
+					</svg>
+					Yes, {isArchived ? 'Activated' : 'Archived'} this project
+				</Button>
+			</form>
+		</div>
+	</Modal>
+</Section>
 
 <style>
 	.line-clamp-2 {

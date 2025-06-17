@@ -31,14 +31,26 @@ public class ProjectRepository {
 
     private static final String GET_PROJECT = """
             select id, name, description, status, start_date, end_date, created_by, created_at, updated_at, is_deleted, deleted_at
-            from projects where id = $1
+            from projects where id = $1 and is_deleted = false
             """;
 
     private static final String GET_PROJECTS_BY_USER = """
             select p.id, p.name, p.description, p.status, p.start_date, p.end_date, m.user_id, m.role_id, m.joined_at, m.left_at, m.status
             from projects p
             inner join project_members m on p.id = m.project_id
-            where m.user_id = $1
+            where m.user_id = $1 and p.is_deleted = false
+            """;
+
+    private static final String UPDATE_PROJECT = """
+            update projects set name = $1, description = $2, start_date = $3, end_date = $4, updated_at = $5 where id = $6
+            """;
+
+    private static final String DELETE_PROJECT = """
+            update projects set is_deleted = $1, deleted_at = $2 where id = $3
+            """;
+
+    private static final String ARCHIVE_PROJECT = """
+            update projects set status = $1, updated_at = $2 where id = $3
             """;
 
     private ProjectEntity mappingEntity(Row row) {
@@ -128,5 +140,54 @@ public class ProjectRepository {
 
     public Uni<List<ProjectResponse.Projects>> getProjects(Integer userId) {
         return client.withConnection(conn -> getProjects(userId, conn));
+    }
+
+    public Uni<Void> updateProject(Integer projectID, ProjectEntity project, SqlConnection conn) {
+        LocalDateTime now = LocalDateTime.now();
+        project.setUpdatedAt(now);
+        return conn.preparedQuery(UPDATE_PROJECT)
+                .execute(Tuple.of(
+                        project.getName(),
+                        project.getDescription(),
+                        project.getStartDate(),
+                        project.getEndDate(),
+                        project.getUpdatedAt(),
+                        projectID))
+                .replaceWithVoid()
+                .onFailure().invoke(throwable -> {
+                    log.errorf("failed update project [ID: %d]: %s", projectID, throwable);
+                });
+    }
+
+    public Uni<Void> updateProject(Integer projectID, ProjectEntity project) {
+        return client.withConnection(conn -> updateProject(projectID, project, conn));
+    }
+
+    public Uni<Void> deleteProject(Integer projectID, SqlConnection conn) {
+        LocalDateTime now = LocalDateTime.now();
+        return conn.preparedQuery(DELETE_PROJECT)
+                .execute(Tuple.of(true, now, projectID))
+                .replaceWithVoid()
+                .onFailure().invoke(throwable -> {
+                    log.errorf("failed delete project [ID: %d]: %s", projectID, throwable);
+                });
+    }
+
+    public Uni<Void> deleteProject(Integer projectID) {
+        return client.withConnection(conn -> deleteProject(projectID, conn));
+    }
+
+    public Uni<Void> archiveProject(Integer projectID, String status, SqlConnection conn) {
+        LocalDateTime now = LocalDateTime.now();
+        return conn.preparedQuery(ARCHIVE_PROJECT)
+                .execute(Tuple.of(status, now, projectID))
+                .replaceWithVoid()
+                .onFailure().invoke(throwable -> {
+                    log.errorf("failed archive project [ID: %d]: %s", projectID, throwable);
+                });
+    }
+
+    public Uni<Void> archiveProject(Integer projectID, String status) {
+        return client.withConnection(conn -> archiveProject(projectID, status, conn));
     }
 }

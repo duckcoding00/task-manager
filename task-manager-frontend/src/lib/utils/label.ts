@@ -62,7 +62,6 @@ export function getPriorityText(status: string) {
 	}
 }
 
-// Perbaikan untuk getPriorityStyle - mengembalikan CSS classes
 export function getPriorityStyle(priority: string) {
 	switch (priority) {
 		case 'low':
@@ -78,18 +77,15 @@ export function getPriorityStyle(priority: string) {
 	}
 }
 
-// Tambahan: Function untuk mendapatkan icon priority
-export function getPriorityIcon(priority: string) {
-	switch (priority) {
-		case 'low':
-			return '⬇️';
-		case 'medium':
-			return '➡️';
-		case 'high':
-			return '⬆️';
-		case 'urgent':
-			return '🔥';
+export function getLevelText(level: number) {
+	switch (level) {
+		case 3:
+			return 'Owner';
+		case 2:
+			return 'Admin';
+		case 1:
+			return 'Member';
 		default:
-			return '❓';
+			return 'Unknown';
 	}
 }

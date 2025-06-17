@@ -19,4 +19,16 @@ public class ProjectRequest {
 
     ) {
     }
+
+    public record update(
+            String name,
+
+            String description,
+
+            @JsonProperty("start_date") LocalDate startDate,
+
+            @JsonProperty("end_date") LocalDate endDate
+
+    ) {
+    }
 }

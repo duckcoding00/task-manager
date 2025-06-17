@@ -81,10 +81,10 @@ public class GlobalException {
         @ServerExceptionMapper
         public Uni<RestResponse<ApiResponse<Object>>> handleValidationException(ValidationException e) {
                 Map<String, Object> errors = Map.of(
-                                "error", e.getMessage() != null ? e.getMessage() : "Validation Error");
+                                "error", e.getMessage() != null ? e.getMessage() : "Invalid Value");
 
                 ApiResponse<Object> error = ApiResponse.error(Response.Status.BAD_REQUEST.getStatusCode(),
-                                "VALIDATION", errors);
+                                "VALIDATION_ERROR", errors);
 
                 return Uni.createFrom().item(RestResponse.status(Response.Status.BAD_REQUEST, error));
         }

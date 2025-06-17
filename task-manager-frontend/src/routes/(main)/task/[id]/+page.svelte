@@ -93,7 +93,7 @@
 	function customEnhance() {
 		loading = true;
 
-		return async ({ result, update, formData }) => {
+		return async ({ result, update, formData }: any) => {
 			loading = false;
 			if (result.type === 'success') {
 				taskStatus = formData.get('status') as string;
@@ -111,7 +111,7 @@
 	function deleteEnhance() {
 		LoadingDelete = true;
 
-		return async ({ result }) => {
+		return async ({ result }: any) => {
 			console.log(result);
 			LoadingDelete = false;
 
@@ -129,7 +129,7 @@
 		loadingUpdate = true;
 		successMessage = '';
 
-		return async ({ result, update }) => {
+		return async ({ result, update }: any) => {
 			loadingUpdate = false;
 			if (result.type === 'success') {
 				successMessage = 'Success Update Task, redirecting...';

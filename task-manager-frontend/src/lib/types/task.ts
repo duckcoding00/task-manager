@@ -65,8 +65,22 @@ export interface tasks {
 	due_date: string;
 }
 
+export interface members {
+	id: number;
+	username: string;
+	project_id: number;
+	user_id: number;
+	role_id: number;
+	joined_at: string;
+	left_at: string;
+	status: string;
+	level: number;
+	description: string;
+}
+
 export interface projectWithData {
 	project: project;
+	members: members[];
 	tasks: tasks[];
 }
 export interface ApiResponse<T> {
