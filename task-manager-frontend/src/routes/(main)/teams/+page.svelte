@@ -86,7 +86,13 @@
 							</div>
 
 							<!-- Action Button -->
-							<Button size="sm" color="gray" class="w-full font-medium" href="/teams/{project.id}">
+							<Button
+								size="sm"
+								color="gray"
+								class="w-full font-medium"
+								href="/teams/{project.id}"
+								data-sveltekit-preload-data="hover"
+							>
 								View Details
 								<svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path

@@ -1,5 +1,5 @@
 import type { ErrorResponse, SingleTaskResponse } from '$lib/types/task';
-import { error, fail, isRedirect, redirect, type Actions } from '@sveltejs/kit';
+import { error, fail, isRedirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load = (async ({ params, fetch }) => {
@@ -63,11 +63,7 @@ export const actions: Actions = {
 					backendError: result.errors || 'Unknown error'
 				});
 			}
-
-			throw redirect(303, '/task');
 		} catch (error) {
-			if (isRedirect(error)) throw error;
-
 			return fail(500, {
 				type: 'network_error',
 				message: 'Cannot connect to server. Please check your connection.',

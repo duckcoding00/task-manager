@@ -14,7 +14,8 @@
 		Checkbox,
 		Alert,
 		List,
-		Li
+		Li,
+		Label
 	} from 'flowbite-svelte';
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
@@ -86,8 +87,8 @@
 
 {#if page.url.pathname !== '/register' && page.url.pathname !== '/login'}
 	<Navbar class="bg-neutral-100">
-		<NavBrand>
-			<a href="/"><span class="text-1xl">Task Manager</span></a>
+		<NavBrand href="/">
+			<span class="text-1xl">Task Manager</span>
 		</NavBrand>
 		<div class="order-2 flex items-center gap-1">
 			{#if data.isAuth}
@@ -150,8 +151,10 @@
 						</Alert>
 					{/if}
 
-					<label for="modal-username" class="space-y-2">
-						<span>Username</span>
+					<div class="space-y-2">
+						<Label for="modal-username">
+							<span>Username *</span>
+						</Label>
 						<Input
 							type="text"
 							name="username"
@@ -162,9 +165,12 @@
 							disabled={loading}
 							color="gray"
 						/>
-					</label>
-					<label for="modal-password" class="space-y-2">
-						<span>Password</span>
+					</div>
+
+					<div class="space-y-2">
+						<Label for="modal-password" class="space-y-2">
+							<span>Password</span>
+						</Label>
 						<Input
 							type="password"
 							name="password"
@@ -175,7 +181,8 @@
 							disabled={loading}
 							color="gray"
 						/>
-					</label>
+					</div>
+
 					<div class="flex items-start">
 						<Checkbox disabled={loading}>Remember me</Checkbox>
 						<a href="/" class="ms-auto text-sm text-gray-700 hover:underline dark:text-white">

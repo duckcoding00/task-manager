@@ -10,7 +10,7 @@
 	<Section name="heroDefault" class="m-auto">
 		<HeroHeader>
 			{#snippet h1()}
-				Hey {data.username}, let's get things done! 🚀
+				Hey {data.username}, let's get things done! span🚀
 			{/snippet}
 			{#snippet paragraph()}
 				Your productivity journey continues here. Create tasks, track progress, and celebrate your
@@ -19,10 +19,20 @@
 		</HeroHeader>
 		<div class="m-10 flex flex-row justify-center space-x-4">
 			<a href="/task">
-				<Button size="lg" color="gray">Add New Task</Button>
+				<Button
+					size="lg"
+					color="gray"
+					class="transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+					>Add New Task</Button
+				>
 			</a>
 			<a href="/teams">
-				<Button size="lg" color="light">Team Project?</Button>
+				<Button
+					size="lg"
+					color="light"
+					class="transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+					>Team Project?</Button
+				>
 			</a>
 		</div>
 	</Section>
@@ -39,10 +49,20 @@
 		</HeroHeader>
 		<div class="flex flex-row justify-center space-x-4">
 			<a href="/register">
-				<Button size="lg" color="gray">Start Organizing</Button>
+				<Button
+					size="lg"
+					color="gray"
+					class="transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+					>Start Organizing</Button
+				>
 			</a>
 			<a href="/login">
-				<Button size="lg" color="light">Already a Member?</Button>
+				<Button
+					size="lg"
+					color="light"
+					class="transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+					>Already a Member?</Button
+				>
 			</a>
 		</div>
 	</Section>

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
+	import { fade } from 'svelte/transition';
 	import '../app.css';
 
 	import type { Snippet } from 'svelte';
@@ -16,4 +17,8 @@
 	<meta name="description" content={page.data.description ? page.data.description : description} />
 </svelte:head>
 
-{@render children()}
+{#key navigating}
+	<main in:fade={{ delay: 300, duration: 300 }} out:fade={{ delay: 200, duration: 200 }}>
+		{@render children()}
+	</main>
+{/key}

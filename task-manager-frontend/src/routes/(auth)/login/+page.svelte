@@ -3,12 +3,16 @@
 	import { Input, Button, Checkbox, Card, Alert, List, Li } from 'flowbite-svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, preloadData } from '$app/navigation';
 
 	// let { data, form }: { data: PageData; form: ActionData } = $props();
 	let loading = $state(false);
 	let errorMessage = $state('');
 	let errorMessages = $state<string[]>([]);
+
+	function delay(ms: number) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
 
 	function customEnhance() {
 		loading = true;
@@ -17,32 +21,40 @@
 
 		return async ({ result, update }: any) => {
 			console.log(result);
-			if (result.type === 'redirect') {
-				await invalidateAll();
-				goto(result.location);
-				return;
-			}
 
-			if (result.type === 'success') {
-				await invalidateAll();
-				await update();
-				return;
-			}
-
-			if (result.type === 'failure') {
-				let data = result.data;
-				let { validations, message } = data;
-
-				if (validations && Array.isArray(validations)) {
-					errorMessages = validations;
-					errorMessage = '';
-				} else if (message === 'Login failed') {
-					errorMessage = message + ' please try again';
-					errorMessages = [];
-				} else {
-					errorMessage = 'An error occurred. Please try again.';
-					errorMessages = [];
+			try {
+				if (result.type === 'redirect') {
+					await delay(500);
+					await preloadData(result.location);
+					goto(result.location);
+					return;
 				}
+
+				if (result.type === 'success') {
+					await invalidateAll();
+					await update();
+					return;
+				}
+
+				if (result.type === 'failure') {
+					let data = result.data;
+					let { validations, message } = data;
+
+					if (validations && Array.isArray(validations)) {
+						errorMessages = validations;
+						errorMessage = '';
+					} else if (message === 'Login failed') {
+						errorMessage = message + ' please try again';
+						errorMessages = [];
+					} else {
+						errorMessage = 'An error occurred. Please try again.';
+						errorMessages = [];
+					}
+				}
+			} catch (error) {
+				console.error('Error in deleteEnhance:', error);
+			} finally {
+				loading = false;
 			}
 		};
 	}
@@ -118,7 +130,9 @@
 							>Lost password?</a
 						>
 					</div>
-					<Button type="submit" class="w-full" color="dark">login account</Button>
+					<Button type="submit" class="w-full" color="dark"
+						>{loading ? 'Redirecting...' : 'Login'}</Button
+					>
 					<div class="text-center text-sm font-medium text-gray-500 dark:text-gray-300">
 						have account? <a href="/register" class="text-gray-700 hover:underline dark:text-white"
 							>create account</a

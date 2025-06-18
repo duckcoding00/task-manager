@@ -1,22 +1,11 @@
 <script lang="ts">
-	import {
-		Alert,
-		Button,
-		Card,
-		Datepicker,
-		Dropdown,
-		DropdownItem,
-		Input,
-		Label,
-		Modal,
-		Textarea
-	} from 'flowbite-svelte';
+	import { Button, Card, Dropdown, DropdownItem, Modal } from 'flowbite-svelte';
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
-	import { goto, invalidateAll } from '$app/navigation';
-	import { slide } from 'svelte/transition';
-	import { formatToISO } from '$lib/utils/formatDate';
+	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { Section } from 'flowbite-svelte-blocks';
+	import FormModal from '$lib/components/FormModal.svelte';
+	import ActionModal from '$lib/components/ActionModal.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let task = $state(data.task);
@@ -24,8 +13,15 @@
 	let modal = $state(false);
 	let updateModal = $state(false);
 
-	// Simple check based on character length
 	let showReadMore = $derived.by(() => (task?.description?.length || 0) > 100);
+
+	let taskStatus = $state(task?.status ?? '');
+
+	let loading = $state(false);
+	let loadingDelete = $state(false);
+	let loadingUpdate = $state(false);
+	let successMessage = $state('');
+	let selectedDate = $state(task?.due_dated_at ? new Date(task.due_dated_at) : undefined);
 
 	function toggleExpanded() {
 		isExpanded = !isExpanded;
@@ -42,22 +38,6 @@
 		});
 	}
 
-	function getStatusStyle(status: string) {
-		switch (status) {
-			case 'todo':
-				return 'bg-red-100 text-red-800 border-red-200';
-			case 'in_progress':
-				return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-			case 'completed':
-				return 'bg-green-100 text-green-800 border-green-200';
-			case 'canceled':
-				return 'bg-red-400 text-red-800 border-red-600';
-			default:
-				return 'bg-gray-100 text-gray-800 border-gray-200';
-		}
-	}
-
-	// Fungsi untuk style hover button
 	function getStatusButtonStyle(status: string) {
 		switch (status) {
 			case 'todo':
@@ -77,11 +57,6 @@
 		return status ? status.replace('_', ' ').toUpperCase() : '';
 	}
 
-	let taskStatus = $state(task?.status ?? '');
-
-	let loading = $state(false);
-
-	// Hapus handleStatusChange lama, ganti jadi trigger submit form
 	function handleStatusChange(status: string) {
 		const form = document.getElementById('status-form') as HTMLFormElement;
 		if (form) {
@@ -103,56 +78,51 @@
 		};
 	}
 
-	let LoadingDelete = $state(false);
 	function delay(ms: number) {
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
 	function deleteEnhance() {
-		LoadingDelete = true;
+		loadingDelete = true;
 
 		return async ({ result }: any) => {
-			console.log(result);
-			LoadingDelete = false;
+			try {
+				console.log(result);
 
-			if (result.type === 'redirect') {
-				await delay(1500);
-				await invalidateAll();
-				goto(result.location);
+				if (result.type === 'success') {
+					await delay(350);
+					await preloadData('/task');
+					goto('/task');
+				}
+			} catch (error) {
+				console.error('Error in deleteEnhance:', error);
+			} finally {
+				loadingDelete = false;
 			}
 		};
 	}
 
-	let loadingUpdate = $state(false);
-	let successMessage = $state('');
 	function updateEnhance() {
 		loadingUpdate = true;
 		successMessage = '';
 
 		return async ({ result, update }: any) => {
-			loadingUpdate = false;
-			if (result.type === 'success') {
-				successMessage = 'Success Update Task, redirecting...';
-				await invalidateAll();
+			try {
+				if (result.type === 'success') {
+					successMessage = 'Success Update Task, redirecting...';
 
-				setTimeout(() => {
+					await delay(350);
 					updateModal = false;
-					successMessage = '';
 					location.reload();
-				}, 1000);
-				return;
+					return;
+				}
+				await update();
+			} catch (error) {
+				console.error('Error in deleteEnhance:', error);
+			} finally {
+				loadingUpdate = false;
 			}
-
-			await update();
 		};
-	}
-
-	// Tambahkan state untuk date picker
-	let selectedDate = $state(task?.due_dated_at ? new Date(task.due_dated_at) : undefined);
-
-	// Function untuk handle perubahan date
-	function handleDateChange(event: CustomEvent) {
-		selectedDate = event.detail;
 	}
 </script>
 
@@ -310,114 +280,33 @@
 </div>
 
 <Section sectionClass="h-96">
-	<Modal title="" bind:open={modal} autoclose size="sm" class="w-full">
-		<svg
-			class="mx-auto mb-3.5 h-11 w-11 text-gray-400 dark:text-gray-500"
-			aria-hidden="true"
-			fill="currentColor"
-			viewBox="0 0 20 20"
-			xmlns="http://www.w3.org/2000/svg"
-			><path
-				fill-rule="evenodd"
-				d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-				clip-rule="evenodd"
-			/></svg
-		>
-		<p class="mb-4 text-center text-gray-500 dark:text-gray-300">
-			Are you sure you want to delete this Task {task?.title}?
-		</p>
-		<div class="flex items-center justify-center space-x-4">
-			<Button color="light" onclick={() => (modal = false)}>No, Cancel</Button>
-			<form action="?/delete" method="post" use:enhance={deleteEnhance}>
-				<input type="hidden" name="id" value={task?.id} />
-				<Button color="red" type="submit" disabled={LoadingDelete}>
-					<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-						></path>
-					</svg>
-					{LoadingDelete ? 'Redirecting....' : `Yes, I'm sure`}
-				</Button>
-			</form>
-		</div>
-	</Modal>
+	<ActionModal
+		bind:open={modal}
+		loading={loadingDelete}
+		id={task?.id?.toString()}
+		enhance={deleteEnhance}
+		question="Are you sure you want to delete this Task {task?.title}?"
+		isDelete
+		action="?/delete"
+	/>
 </Section>
 
-<Modal bind:open={updateModal} autoclose={false} size="md" transition={slide}>
-	<div class="flex justify-center">
-		<Card class="max-w-full rounded-none border-none p-4 shadow-none sm:p-6 md:p-8">
-			<form
-				class="flex flex-col space-y-6"
-				method="POST"
-				use:enhance={updateEnhance}
-				action="?/updateTask"
-			>
-				<Input type="hidden" name="taskId" value={task?.id} />
-				<h3 class="text-xl font-bold text-gray-900 dark:text-white">Update Task</h3>
-
-				<Label for="title">
-					<span>Title</span>
-					<Input
-						value={task?.title}
-						type="text"
-						name="title"
-						placeholder="Task title"
-						id="title"
-						color="gray"
-						required
-						disabled={loadingUpdate}
-					/>
-				</Label>
-
-				<Label for="description">
-					<span>Description</span>
-					<Textarea
-						value={task?.description}
-						id="description"
-						placeholder="Task description"
-						color="gray"
-						rows={4}
-						name="description"
-						disabled={loadingUpdate}
-					/>
-				</Label>
-
-				<Label for="date">
-					<span>Due Date</span>
-					<Datepicker
-						bind:value={selectedDate}
-						color="gray"
-						id="datepicker"
-						disabled={loadingUpdate}
-					/>
-					<Input
-						type="hidden"
-						name="date"
-						value={selectedDate ? formatToISO(selectedDate.toISOString()) : ''}
-					/>
-				</Label>
-
-				<div class="flex gap-3">
-					<Button
-						type="submit"
-						class="flex-1 bg-gray-700 text-white hover:bg-gray-900"
-						disabled={loadingUpdate}
-					>
-						{loadingUpdate ? 'Updating...' : 'Update Task'}
-					</Button>
-					<Button
-						color="alternative"
-						onclick={() => (updateModal = false)}
-						disabled={loadingUpdate}
-						type="button"
-					>
-						Cancel
-					</Button>
-				</div>
-			</form>
-		</Card>
-	</div>
-</Modal>
+<FormModal
+	bind:open={updateModal}
+	action="?/updateTask"
+	size="md"
+	formTitle="Update Task"
+	formDescription="Update your current task to new task"
+	first_field="Title"
+	first_field_value={task.title}
+	second_field="Description"
+	second_field_value={task.description}
+	loading={loadingUpdate}
+	enhance={updateEnhance}
+	datepicker
+	update
+	third_field="Due Date Task"
+	formDate={selectedDate}
+	hidden_field="taskId"
+	hidden_field_value={task.id}
+/>
