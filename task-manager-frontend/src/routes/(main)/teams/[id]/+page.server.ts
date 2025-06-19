@@ -139,5 +139,81 @@ export const actions: Actions = {
 				error: error instanceof Error ? error.message : 'Unknown network error'
 			});
 		}
+	},
+	update: async ({ fetch, request }) => {
+		const form = await request.formData();
+		const name = form.get('name') as string;
+		const description = form.get('description') as string;
+		const start_date = form.get('start_date') as string;
+		const end_date = form.get('end_date') as string;
+		const projectID = form.get('projectId');
+
+		const body = JSON.stringify({
+			name,
+			description,
+			start_date: start_date,
+			end_date: end_date
+		});
+
+		console.log(body);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:8080/projects/${projectID}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/json'
+				},
+				body
+			});
+
+			const result = await response.json();
+			console.log(result);
+
+			if (!response.ok) {
+				return fail(response.status, {
+					message: result.message || result.error || 'Failed to create task',
+					backendError: result.errors || 'Unknown backend error',
+					type: 'backend_error'
+				});
+			}
+		} catch (err) {
+			console.log('Network or other error:', err);
+
+			return fail(500, {
+				type: 'network_error',
+				message: 'Cannot connect to server. Please check your connection.',
+				error: error instanceof Error ? error.message : 'Unknown network error'
+			});
+		}
+	},
+	delete: async ({ fetch, request }) => {
+		const form = await request.formData();
+		const id = form.get('id') as string;
+
+		try {
+			const response = await fetch(`http://127.0.0.1:8080/projects/${id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/json'
+				}
+			});
+
+			const result = await response.json();
+			console.log(result);
+			if (!response.ok) {
+				return fail(response.status || 400, {
+					message: result.message || result.error || 'Insert failed',
+					backendError: result.errors || 'Unknown error'
+				});
+			}
+		} catch (error) {
+			return fail(500, {
+				type: 'network_error',
+				message: 'Cannot connect to server. Please check your connection.',
+				error: error instanceof Error ? error.message : 'Unknown network error'
+			});
+		}
 	}
 };

@@ -42,6 +42,7 @@
 		third_field_value?: any;
 
 		datepicker?: boolean;
+		isDatePickerRange?: boolean;
 		update?: boolean;
 		isSelected?: boolean;
 		formDate?: Date | undefined;
@@ -70,6 +71,7 @@
 		third_field_value,
 
 		datepicker = false,
+		isDatePickerRange = false,
 		update = false,
 		isSelected = false,
 		formDate = undefined,
@@ -125,8 +127,11 @@
 
 			<div class="space-y-2">
 				<Label for={first_field?.toLowerCase()} class="text-sm font-medium text-gray-800"
-					>{first_field} <span class=" text-red-500">*</span></Label
-				>
+					>{first_field}
+					{#if !update}
+						<span class=" text-red-500">*</span>
+					{/if}
+				</Label>
 				<Input
 					class="transition-colors focus:ring-2"
 					id={first_field?.toLowerCase()}
@@ -143,7 +148,10 @@
 
 			<div class="space-y-2">
 				<Label for={second_field?.toLowerCase()} class="text-sm font-medium text-gray-800"
-					>{second_field} <span class=" text-red-500">*</span></Label
+					>{second_field}
+					{#if !update}
+						<span class=" text-red-500">*</span>
+					{/if}</Label
 				>
 				<Input
 					class="transition-colors focus:ring-2"
@@ -175,9 +183,12 @@
 			<div class="space-y-2">
 				{#if datepicker}
 					<Label for={third_field?.toLowerCase()} class="text-sm font-medium text-gray-800"
-						>{third_field} <span class=" text-red-500">*</span></Label
+						>{third_field}
+						{#if !update}
+							<span class=" text-red-500">*</span>
+						{/if}</Label
 					>
-					{#if toDate}
+					{#if isDatePickerRange}
 						<Datepicker
 							range
 							bind:rangeFrom={formDate}

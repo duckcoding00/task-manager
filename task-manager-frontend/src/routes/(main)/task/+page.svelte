@@ -2,6 +2,9 @@
 	import { Card } from 'flowbite-svelte';
 	import type { PageData } from './$types';
 	import { getStatusClass, getStatusLabel, getStatusStyle } from '$lib/utils/label';
+	import TaskCard from '$lib/components/TaskCard.svelte';
+	import { AngleRightOutline } from 'flowbite-svelte-icons';
+	import { goto, preloadData } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 
@@ -25,48 +28,29 @@
 			class="flex flex-col items-center gap-6 md:grid md:grid-cols-2 md:items-stretch lg:grid-cols-3 xl:grid-cols-4"
 		>
 			{#each tasks as task (task.id)}
-				<Card
-					class="h-60 w-full max-w-sm  transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-				>
-					<div class="flex h-full flex-col p-4">
-						<div class="mb-4 flex-none">
-							<h1
-								class="line-clamp-2 text-xl leading-tight font-bold text-black transition-colors duration-200 hover:text-blue-300"
-							>
-								<a
-									href="/task/{task.id}"
-									class="hover:underline"
-									data-sveltekit-preload-data="hover">{task.title}</a
-								>
-							</h1>
-						</div>
-
-						<div class="mb-4 flex-1">
-							<p class="line-clamp-4 text-sm leading-relaxed text-black">
-								{task.description}
-							</p>
-						</div>
-
-						<div class="flex-none">
-							<div class="flex items-center justify-between">
-								<span
-									class="rounded-full border px-3 py-1 text-xs font-semibold {getStatusStyle(
-										task.status
-									)}"
-								>
-									{getStatusLabel(task.status)}
-								</span>
-
-								<time
-									class="rounded-md bg-slate-700/50 px-2 py-1 text-xs font-medium text-white"
-									datetime={task.due_dated_at}
-								>
-									📅 {formatDate(task.due_dated_at)}
-								</time>
-							</div>
-						</div>
-					</div>
-				</Card>
+				<TaskCard title={task.title} date={task.due_dated_at}>
+					{#snippet tRcontent(hovered: boolean)}
+						{#if hovered}
+							<AngleRightOutline
+								class="cursor-pointer"
+								size="md"
+								onclick={() => {
+									preloadData(`/task/${task.id}`);
+									goto(`/task/${task.id}`);
+								}}
+							/>
+						{/if}
+					{/snippet}
+					{#snippet bRcontent()}
+						<span
+							class="rounded-full border px-3 py-1 text-xs font-semibold {getStatusStyle(
+								task.status
+							)}"
+						>
+							{getStatusLabel(task.status)}
+						</span>
+					{/snippet}
+				</TaskCard>
 			{/each}
 		</div>
 	{:else}

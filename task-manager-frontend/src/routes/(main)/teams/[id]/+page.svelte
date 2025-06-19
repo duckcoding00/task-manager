@@ -2,6 +2,7 @@
 	import { Breadcrumb, BreadcrumbItem, Button, Card, Modal } from 'flowbite-svelte';
 	import type { PageData } from './$types';
 	import { formatDate } from '$lib/utils/formatDate';
+	import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
 	import {
 		getLevelText,
 		getPriorityStyle,
@@ -15,13 +16,19 @@
 	import { Section } from 'flowbite-svelte-blocks';
 	import FormModal from '$lib/components/FormModal.svelte';
 	import ActionModal from '$lib/components/ActionModal.svelte';
+	import TaskCard from '$lib/components/TaskCard.svelte';
+	import TagMember from '$lib/components/TagMember.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let project = $state(data.project);
 	let tasks = $state(data.tasks);
 	let members = $state(data.members);
 	let modal = $state(false);
+	let modalUpdate = $state(false);
+	let loadingUpdate = $state(false);
+	let loadingDelete = $state(false);
 	let modalArchive = $state(false);
+	let modalDelete = $state(false);
 	let isArchived = $derived.by(() => {
 		if (project?.status === 'archive') {
 			return true;
@@ -59,6 +66,10 @@
 		errorMessages = [];
 		loading = false;
 		resetForm();
+	}
+
+	function delay(ms: number) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
 	function customEnhance() {
@@ -118,6 +129,7 @@
 				if (result.type === 'success') {
 					projectStatus = formData.get('status') as string;
 					isArchived = projectStatus === 'archive';
+					await delay(300);
 					modalArchive = false;
 				}
 			} catch (error) {
@@ -127,51 +139,95 @@
 			}
 		};
 	}
+
+	let selectedEndDate = $state(project?.end_date ? new Date(project.end_date) : undefined);
+	let selectedStartDate = $state(project?.end_date ? new Date(project.end_date) : undefined);
+	let projectName = $state(project?.name);
+	let projectDescription = $state(project?.description);
+	let projectEnd = $state(project?.end_date);
+	let projectStart = $state(project?.start_date);
+
+	function updateEnhanced() {
+		loadingUpdate = true;
+
+		return async ({ result, formData }: any) => {
+			console.log(result);
+			try {
+				if (result.type === 'success') {
+					projectName = formData.get('name') as string;
+					projectDescription = formData.get('description') as string;
+					projectStart = formData.get('start_date') as string;
+					projectEnd = formData.get('end_date') as string;
+					await delay(500);
+					modalUpdate = false;
+				}
+			} catch (error) {
+				console.error('Error in deleteEnhance:', error);
+			} finally {
+				loadingUpdate = false;
+			}
+		};
+	}
+
+	function deleteEnhance() {
+		loadingDelete = true;
+
+		return async ({ result }: any) => {
+			try {
+				if (result.type === 'success') {
+					await delay(300);
+					await preloadData('/teams');
+					goto('/teams');
+				}
+			} catch (error) {
+				console.error('Error in deleteEnhance:', error);
+			} finally {
+				loadingDelete = false;
+			}
+		};
+	}
+
+	function getStyle(isArchived: boolean) {
+		switch (isArchived) {
+			case false:
+				return 'bg-blue-300 hover:bg-blue-600';
+			case true:
+				return 'bg-green-300 hover:bg-green-600';
+		}
+	}
 </script>
 
-<div class="container m-3 border-b-1 border-b-gray-400 p-3 md:m-4 md:p-4">
+<div class="container m-3 p-3 md:m-4 md:border-b-1 md:border-b-gray-400 md:p-4">
 	<div class="mb-4 grid gap-6 md:grid-cols-2">
 		<div class="mb-10 text-center md:mb-8 md:text-left">
-			<Breadcrumb aria-label="Solid background breadcrumb example" class="mb-6 md:mb-4">
-				<BreadcrumbItem href="/teams" home>Teams</BreadcrumbItem>
-				<BreadcrumbItem href="#">{project?.name}</BreadcrumbItem>
-			</Breadcrumb>
-			<div class="space-y-4">
-				<div class="space-y-1">
-					<div class="mb-2 flex items-center justify-center gap-3 md:justify-start">
-						<h1 class="text-2xl font-bold text-gray-900 md:text-3xl dark:text-white">
-							{project?.name}
+			<div class="space-y-6">
+				<div class="mb-6 space-y-3">
+					<div
+						class="flex flex-col items-center gap-3 md:flex-row md:items-center md:justify-start"
+					>
+						<h1 class="text-3xl font-bold text-gray-900 md:text-4xl dark:text-white">
+							{projectName}
 						</h1>
-						<!-- Status Badge -->
 						<span
-							class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {getStatusClass(
+							class="inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium shadow-sm {getStatusClass(
 								projectStatus || ''
 							)}"
 						>
 							{getStatusText(projectStatus || '')}
 						</span>
 					</div>
-					<p class="text-lg text-gray-600 dark:text-gray-300">
-						{project?.description}
+					<p class="max-w-2xl text-lg leading-relaxed text-gray-600 dark:text-gray-300">
+						{projectDescription}
 					</p>
 				</div>
-				<div class="hidden md:block">
+
+				<div class="hidden flex-wrap md:block">
 					{#if members && members.length > 0}
-						<Card class="max-w-full border-none shadow-none">
+						<div class="flex flex-wrap items-center gap-2">
 							{#each members as member (member.id)}
-								<div
-									class="flex items-center justify-between border-b-1 border-b-gray-400 text-gray-700"
-								>
-									<p>{member.username}</p>
-									<p>{getLevelText(member.level)}</p>
-									<p>{member.status}</p>
-									<p>{formatDate(member.joined_at)}</p>
-									{#if member.left_at}
-										<p>{member.left_at}</p>
-									{/if}
-								</div>
+								<TagMember username={member.username} level={member.level} status={member.status} />
 							{/each}
-						</Card>
+						</div>
 					{/if}
 				</div>
 			</div>
@@ -189,10 +245,10 @@
 						<span class="text-gray-500 dark:text-gray-400">Start Date</span>
 						<div class="text-right">
 							<div class="font-medium text-gray-900 dark:text-white">
-								{formatDate(project?.start_date || '')}
+								{formatDate(projectStart || '')}
 							</div>
 							<div class="text-xs text-gray-500">
-								{formatRelativeDate(project?.start_date || '')}
+								{formatRelativeDate(projectStart || '')}
 							</div>
 						</div>
 					</div>
@@ -201,10 +257,10 @@
 						<span class="text-gray-500 dark:text-gray-400">End Date</span>
 						<div class="text-right">
 							<div class="font-medium text-gray-900 dark:text-white">
-								{formatDate(project?.end_date || '')}
+								{formatDate(projectEnd || '')}
 							</div>
 							<div class="text-xs text-gray-500">
-								{formatRelativeDate(project?.end_date || '')}
+								{formatRelativeDate(projectEnd || '')}
 							</div>
 						</div>
 					</div>
@@ -252,13 +308,18 @@
 						<h3 class="mb-3 font-semibold text-gray-900 dark:text-white">Actions</h3>
 						<div class="space-y-2">
 							<Button
-								class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+								class="w-full rounded-lg border hover:text-gray-800"
+								color="alternative"
 								disabled={isArchived}
+								onclick={() => {
+									modalUpdate = true;
+								}}
 							>
 								Edit Project
 							</Button>
 							<Button
-								class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+								class="w-full rounded-lg border hover:text-gray-800"
+								color="alternative"
 								onclick={() => {
 									modal = true;
 								}}
@@ -266,14 +327,25 @@
 							>
 								Add Task
 							</Button>
-							<Button
-								class="w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-600 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
-								onclick={() => {
-									modalArchive = true;
-								}}
-							>
-								{isArchived ? 'Active' : 'Archive'}
-							</Button>
+							<div class="flex gap-1">
+								<Button
+									class="w-full rounded-lg border {getStyle(isArchived)}"
+									onclick={() => {
+										modalArchive = true;
+									}}
+								>
+									{isArchived ? 'Active' : 'Archive'}
+								</Button>
+								<Button
+									class="w-full rounded-lg border"
+									color="red"
+									onclick={() => {
+										modalDelete = true;
+									}}
+								>
+									Delete
+								</Button>
+							</div>
 						</div>
 					</Card>
 				</div>
@@ -288,55 +360,37 @@
 			class="flex flex-col items-center gap-6 md:grid md:grid-cols-2 md:items-stretch lg:grid-cols-3 xl:grid-cols-4"
 		>
 			{#each tasks as task (task.id)}
-				<Card
-					class="h-60 w-full max-w-sm  transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-				>
-					<div class="flex h-full flex-col p-4">
-						<div class="mb-4 flex justify-between">
-							<h1
-								class="line-clamp-2 text-xl leading-tight font-bold text-black transition-colors duration-200 hover:text-blue-300"
-							>
-								<a
-									href="/task/{task.id}"
-									class="hover:underline"
-									data-sveltekit-preload-data="hover">{task.title}</a
-								>
-							</h1>
-							<span
-								class="rounded-full border px-3 py-1 text-xs font-semibold {getPriorityStyle(
-									task.status
-								)}"
-							>
-								{getPriorityText(task.priority)}
-							</span>
-						</div>
-
-						<div class="mb-4 flex-1">
-							<p class="line-clamp-4 text-sm leading-relaxed text-black">
-								{task.description}
-							</p>
-						</div>
-
-						<div class="flex-none">
-							<div class="flex items-center justify-between">
-								<span
-									class="rounded-full border px-3 py-1 text-xs font-semibold {getStatusStyle(
-										task.status
-									)}"
-								>
-									{getStatusLabel(task.status)}
-								</span>
-
-								<time
-									class="rounded-md bg-slate-700/50 px-2 py-1 text-xs font-medium text-white"
-									datetime={task.due_date}
-								>
-									📅 {formatDate(task.due_date)}
-								</time>
-							</div>
-						</div>
-					</div>
-				</Card>
+				<TaskCard title={task.title} date={task.due_date}>
+					{#snippet tRcontent(hovered: boolean)}
+						{#if hovered}
+							<AngleRightOutline
+								class="cursor-pointer"
+								size="md"
+								onclick={() => {
+									goto('/teams');
+								}}
+							/>
+						{/if}
+					{/snippet}
+					{#snippet bLcontent()}
+						<span
+							class="rounded-full border px-3 py-1 text-xs font-semibold {getPriorityStyle(
+								task.priority
+							)}"
+						>
+							{getPriorityText(task.priority)}
+						</span>
+					{/snippet}
+					{#snippet bRcontent()}
+						<span
+							class="rounded-full border px-3 py-1 text-xs font-semibold {getStatusStyle(
+								task.status
+							)}"
+						>
+							{getStatusLabel(task.status)}
+						</span>
+					{/snippet}
+				</TaskCard>
 			{/each}
 		</div>
 	{:else}
@@ -377,6 +431,28 @@
 	isSelected
 />
 
+<FormModal
+	bind:open={modalUpdate}
+	action="?/update"
+	enhance={updateEnhanced}
+	loading={loadingUpdate}
+	size="md"
+	formTitle="Update Current Project"
+	formDescription="Update your current project to new project"
+	first_field="Name"
+	first_field_value={project?.name}
+	second_field="Description"
+	second_field_value={project?.description}
+	datepicker
+	isDatePickerRange
+	update
+	third_field="End Date Project"
+	formDate={selectedEndDate}
+	toDate={selectedStartDate}
+	hidden_field="projectId"
+	hidden_field_value={project?.id}
+/>
+
 <Section sectionClass="h-96">
 	<ActionModal
 		bind:open={modalArchive}
@@ -386,6 +462,18 @@
 		question="Are you sure you want to {isArchived ? 'Active' : 'Archive'} this Project?"
 		action="?/archive"
 		status={isArchived ? 'active' : 'archive'}
+	/>
+</Section>
+
+<Section sectionClass="h-96">
+	<ActionModal
+		bind:open={modalDelete}
+		loading={loadingDelete}
+		id={project?.id.toString()}
+		enhance={deleteEnhance}
+		question="Are you sure you want to delete this Project {projectName} ?"
+		action="?/delete"
+		isDelete
 	/>
 </Section>
 

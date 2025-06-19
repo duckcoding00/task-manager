@@ -2,6 +2,7 @@
 	import { HeroHeader, Section } from 'flowbite-svelte-blocks';
 	import type { PageData } from './$types';
 	import { Button } from 'flowbite-svelte';
+	import PageTask from '$lib/components/PageTask.svelte';
 
 	let { data }: { data: PageData } = $props();
 </script>

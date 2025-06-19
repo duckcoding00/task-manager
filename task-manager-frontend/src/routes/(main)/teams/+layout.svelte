@@ -3,7 +3,7 @@
 	import type { LayoutData } from './$types';
 	import { page } from '$app/state';
 	import { Button } from 'flowbite-svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import FormModal from '$lib/components/FormModal.svelte';
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -30,6 +30,11 @@
 		timeline.to = undefined;
 		nameError = '';
 		dateError = '';
+		modal = false;
+	}
+
+	function delay(ms: number) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
 	function customEnhance() {
@@ -38,35 +43,35 @@
 		successMessage = '';
 
 		return async ({ result, update }: any) => {
-			loading = false;
 			console.log(result);
 
-			if (result.type === 'success') {
-				successMessage = 'Success created new project, redirecting...';
-				resetForm();
-				await invalidateAll();
-
-				setTimeout(() => {
-					modal = false;
-					successMessage = '';
-					location.reload();
+			try {
+				if (result.type === 'success') {
+					successMessage = 'Success created new project, redirecting...';
+					await delay(500);
+					await preloadData('/teams');
 					goto('/teams');
-				}, 1000);
-				return;
-			} else if (result.type === 'failure') {
-				const data = result.data;
-				const { validations, error } = data || {};
+					location.reload();
+					resetForm();
+				} else if (result.type === 'failure') {
+					const data = result.data;
+					const { validations, error } = data || {};
 
-				if (validations && Array.isArray(validations)) {
-					errorMessages = validations;
-				} else if (error) {
-					errorMessages = [error];
-				} else {
-					errorMessages = ['An error occurred. Please try again.'];
+					if (validations && Array.isArray(validations)) {
+						errorMessages = validations;
+					} else if (error) {
+						errorMessages = [error];
+					} else {
+						errorMessages = ['An error occurred. Please try again.'];
+					}
 				}
-			}
 
-			await update();
+				await update();
+			} catch (error) {
+				console.log('failed updateEnhance', error);
+			} finally {
+				loading = false;
+			}
 		};
 	}
 </script>
@@ -111,7 +116,8 @@
 		{loading}
 		enhance={customEnhance}
 		datepicker
-		third_field="Time Line Project"
+		isDatePickerRange
+		third_field="Timline Project"
 		formDate={timeline.from}
 		toDate={timeline.to}
 	/>
