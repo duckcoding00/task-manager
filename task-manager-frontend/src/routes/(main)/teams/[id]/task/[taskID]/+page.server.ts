@@ -1,34 +1,31 @@
 import type { ErrorResponse, SingleTaskResponse } from '$lib/types/task';
-import { error, fail, isRedirect, type Actions } from '@sveltejs/kit';
+import { error, fail, isRedirect, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load = (async ({ params, fetch }) => {
+export const load = (async ({ fetch, params }) => {
 	try {
-		const taskResponse = await fetch(`http://127.0.0.1:8080/tasks/${params.id}`);
-		const taskResult: SingleTaskResponse | ErrorResponse = await taskResponse.json();
+		const response = await fetch(
+			`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}`
+		);
+		const result: SingleTaskResponse | ErrorResponse = await response.json();
+		console.log(result);
 
-		console.log(taskResult);
-
-		if (!taskResponse.ok) {
-			if (
-				'errors' in taskResult &&
-				taskResult.errors === 'NOT_FOUND' &&
-				taskResult.status_code === 404
-			) {
-				throw error(404, taskResult.details.error);
+		if (!response.ok) {
+			if ('errors' in result && result.errors === 'NOT_FOUND' && result.status_code === 404) {
+				throw error(404, result.details.error);
 			}
 
-			if ('errors' in taskResult) {
-				throw error(taskResponse.status, taskResult.errors);
+			if ('errors' in result) {
+				throw error(response.status, result.errors);
 			}
 
-			throw error(taskResponse.status, 'Failed to load task');
+			throw error(response.status, 'Failed to load task');
 		}
 
-		const subTaskResponse = await fetch(`http://127.0.0.1:8080/tasks/${params.id}/subtask`);
+		const subTaskResponse = await fetch(
+			`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}/subtask`
+		);
 		const subTaskResult = await subTaskResponse.json();
-
-		console.log(subTaskResult);
 
 		if (!subTaskResponse.ok) {
 			if (
@@ -40,26 +37,25 @@ export const load = (async ({ params, fetch }) => {
 			}
 
 			if ('errors' in subTaskResult) {
-				throw error(taskResponse.status, subTaskResult.errors);
+				throw error(subTaskResponse.status, subTaskResult.errors);
 			}
 
-			throw error(taskResponse.status, 'Failed to load task');
+			throw error(subTaskResponse.status, 'Failed to load task');
 		}
 
-		if ('data' in taskResult && 'data' in subTaskResult) {
+		if ('data' in result) {
 			return {
-				task: taskResult.data,
+				task: result.data,
 				subtask: subTaskResult.data,
 				error: null,
-				title: taskResult.data.title,
-				description: taskResult.data.description
+				title: result.data.title,
+				description: result.data.description
 			};
 		}
 
 		throw error(500, 'Invalid data format');
 	} catch (err) {
 		console.error('Error loading task:', err);
-		// Jika err sudah berupa SvelteKit error, re-throw
 		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
@@ -68,37 +64,7 @@ export const load = (async ({ params, fetch }) => {
 }) satisfies PageServerLoad;
 
 export const actions: Actions = {
-	delete: async ({ request, fetch }) => {
-		const form = await request.formData();
-		const id = form.get('id') as string;
-
-		try {
-			const response = await fetch(`http://127.0.0.1:8080/tasks/${id}`, {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
-				}
-			});
-
-			const result = await response.json();
-			console.log(result);
-			if (!response.ok) {
-				return fail(response.status || 400, {
-					message: result.message || result.error || 'Insert failed',
-					backendError: result.errors || 'Unknown error'
-				});
-			}
-		} catch (error) {
-			return fail(500, {
-				type: 'network_error',
-				message: 'Cannot connect to server. Please check your connection.',
-				error: error instanceof Error ? error.message : 'Unknown network error'
-			});
-		}
-	},
-
-	updateStatus: async ({ request, fetch }) => {
+	updateStatus: async ({ request, fetch, params }) => {
 		const form = await request.formData();
 		const taskId = form.get('taskId') as string;
 		const status = form.get('status') as string;
@@ -107,13 +73,16 @@ export const actions: Actions = {
 		console.log(taskId);
 
 		try {
-			const response = await fetch(`http://127.0.0.1:8080/tasks/${taskId}?status=${status}`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}/?status=${status}`,
+				{
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
 				}
-			});
+			);
 
 			const result = await response.json();
 			console.log('Update status result:', result);
@@ -140,9 +109,91 @@ export const actions: Actions = {
 		}
 	},
 
-	updateTask: async ({ request, fetch }) => {
+	updatePriority: async ({ request, fetch, params }) => {
 		const form = await request.formData();
 		const taskId = form.get('taskId') as string;
+		// const projectId = form.get('projectId') as string;
+		const priority = form.get('priority') as string;
+
+		console.log(priority);
+		console.log(taskId);
+
+		try {
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}/?priority=${priority}`,
+				{
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
+				}
+			);
+
+			const result = await response.json();
+			console.log('Update priority result:', result);
+
+			if (!response.ok) {
+				return fail(response.status || 400, {
+					message: result.message || result.error || 'Update priority failed',
+					backendError: result.errors || 'Unknown error'
+				});
+			}
+
+			return {
+				success: true,
+				message: 'Status priority successfully'
+			};
+		} catch (error) {
+			if (isRedirect(error)) throw error;
+
+			return fail(500, {
+				type: 'network_error',
+				message: 'Cannot connect to server. Please check your connection.',
+				error: error instanceof Error ? error.message : 'Unknown network error'
+			});
+		}
+	},
+
+	delete: async ({ request, fetch, params }) => {
+		const form = await request.formData();
+		const id = form.get('id') as string;
+		console.log(id);
+
+		try {
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}`,
+				{
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
+				}
+			);
+
+			const result = await response.json();
+			console.log(result);
+			if (!response.ok) {
+				return fail(response.status || 400, {
+					message: result.message || result.error || 'Insert failed',
+					backendError: result.errors || 'Unknown error'
+				});
+			}
+
+			throw redirect(303, `/teams/${params.id}`);
+		} catch (error) {
+			if (isRedirect(error)) throw error;
+			return fail(500, {
+				type: 'network_error',
+				message: 'Cannot connect to server. Please check your connection.',
+				error: error instanceof Error ? error.message : 'Unknown network error'
+			});
+		}
+	},
+
+	updateTask: async ({ request, fetch, params }) => {
+		const form = await request.formData();
 		const title = form.get('title') as string;
 		const description = form.get('description') as string;
 		const due_date = form.get('date') as string;
@@ -156,14 +207,17 @@ export const actions: Actions = {
 		console.log(body);
 
 		try {
-			const response = await fetch(`http://127.0.0.1:8080/tasks/${taskId}/update`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
-				},
-				body: body
-			});
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					},
+					body: body
+				}
+			);
 
 			const result = await response.json();
 			console.log('Update status result:', result);
@@ -195,14 +249,17 @@ export const actions: Actions = {
 			task
 		});
 		try {
-			const response = await fetch(`http://127.0.0.1:8080/tasks/${params.id}/subtask`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
-				},
-				body
-			});
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}/subtask`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					},
+					body
+				}
+			);
 
 			const result = await response.json();
 			console.log('insert subtask result:', result);
@@ -232,13 +289,16 @@ export const actions: Actions = {
 		const taskID = form.get('subtask') as string;
 
 		try {
-			const response = await fetch(`http://127.0.0.1:8080/tasks/${params.id}/subtask/${taskID}`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}/subtask/${taskID}`,
+				{
+					method: 'PATCH',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
 				}
-			});
+			);
 
 			const result = await response.json();
 			console.log('insert subtask result:', result);
@@ -268,13 +328,16 @@ export const actions: Actions = {
 		const taskID = form.get('subtask') as string;
 		console.log('task id', taskID);
 		try {
-			const response = await fetch(`http://127.0.0.1:8080/tasks/${params.id}/subtask/${taskID}`, {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
+			const response = await fetch(
+				`http://127.0.0.1:8080/projects/${params.id}/task/${params.taskID}/subtask/${taskID}`,
+				{
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
 				}
-			});
+			);
 
 			const result = await response.json();
 			console.log('insert subtask result:', result);

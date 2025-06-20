@@ -3,9 +3,16 @@
 	import { formatDate, formatToDateString } from '$lib/utils/formatDate';
 	import { getStatusLabel } from '$lib/utils/label';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	import { Button, Dropdown, DropdownItem, Timeline, TimelineItem } from 'flowbite-svelte';
+	import { Button, Dropdown, DropdownItem, Input, Timeline, TimelineItem } from 'flowbite-svelte';
+	import {
+		AngleDownOutline,
+		AngleUpOutline,
+		CheckOutline,
+		PlusOutline
+	} from 'flowbite-svelte-icons';
 	import type { Snippet } from 'svelte';
 
+	let open = $state(false);
 	interface props {
 		created?: string;
 		duedated?: string;
@@ -13,10 +20,23 @@
 		title?: string;
 		description?: string;
 		status?: string;
+		priority?: string;
 		id?: number;
+		id2?: number;
+		task_id?: number;
 
-		enhance?: SubmitFunction;
+		updateStatusEnhance?: SubmitFunction;
+		updatePriorityEnhance?: SubmitFunction;
+		subtaskEnhance?: SubmitFunction;
+
 		hasContent?: Snippet;
+		todoContent?: Snippet;
+		updateStatusAction?: string;
+		updatePriorityAction?: string;
+		subtaskAction?: string;
+		subtask?: string;
+
+		loadingSubtask: boolean;
 	}
 
 	let {
@@ -26,9 +46,21 @@
 		title,
 		description,
 		status,
+		priority,
 		id,
-		enhance: enhanceFunction,
-		hasContent
+		id2,
+		task_id,
+		updateStatusEnhance: updateStatusEnhanceFunction,
+		updatePriorityEnhance: updatePriorityEnhanceFunction,
+		hasContent,
+		todoContent,
+		updateStatusAction,
+		updatePriorityAction,
+		subtaskAction,
+		loadingSubtask = false,
+
+		subtaskEnhance: subtackEnganceFunction,
+		subtask
 	}: props = $props();
 
 	// Status color mapping
@@ -38,38 +70,31 @@
 			case 'done':
 				return 'bg-green-100 text-green-800 border-green-200';
 			case 'in progress':
-			case 'ongoing':
+			case 'low':
 				return 'bg-blue-100 text-blue-800 border-blue-200';
 			case 'todo':
-			case 'waiting':
+			case 'medium':
 				return 'bg-yellow-100 text-yellow-800 border-yellow-200';
 			case 'canceled':
-			case 'blocked':
+			case 'high':
 				return 'bg-red-100 text-red-800 border-red-200';
 			default:
 				return 'bg-gray-100 text-gray-800 border-gray-200';
 		}
 	};
 
-	function getStatusButtonStyle(status: string) {
-		switch (status) {
-			case 'todo':
-				return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200 hover:border-red-300';
-			case 'in_progress':
-				return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200 hover:border-yellow-300';
-			case 'completed':
-				return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200 hover:border-green-300';
-			case 'canceled':
-				return 'bg-red-400 text-red-800 border-red-600 hover:bg-red-500 hover:border-red-700';
-			default:
-				return 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200 hover:border-gray-300';
-		}
-	}
-
 	function handleStatusChange(status: string) {
 		const form = document.getElementById('status-form') as HTMLFormElement;
 		if (form) {
 			(form.querySelector('input[name="status"]') as HTMLInputElement).value = status;
+			form.requestSubmit();
+		}
+	}
+
+	function handlePriorityChange(priority: string) {
+		const form = document.getElementById('priority-form') as HTMLFormElement;
+		if (form) {
+			(form.querySelector('input[name="priority"]') as HTMLInputElement).value = priority;
 			form.requestSubmit();
 		}
 	}
@@ -84,47 +109,88 @@
 						<h1 class="flex-1 text-2xl leading-tight font-bold text-gray-900">
 							{title || 'Untitled Project'}
 						</h1>
-						{#if status}
-							<form
-								id="status-form"
-								action="?/updateStatus"
-								method="post"
-								use:enhance={enhanceFunction}
-							>
-								<input type="hidden" name="taskId" value={id} />
-								<input type="hidden" name="status" value={status} />
-								<div class="flex items-center gap-3">
-									<Button
-										class="rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 {getStatusColor(
-											status || ''
-										)}"
-										size="xs"
-										type="button"
-									>
-										{getStatusLabel(status)}
-									</Button>
+						<div class="flex gap-1">
+							{#if status}
+								<form
+									id="status-form"
+									action={updateStatusAction}
+									method="post"
+									use:enhance={updateStatusEnhanceFunction}
+								>
+									<input type="hidden" name="taskId" value={id} />
+									<input type="hidden" name="projectId" value={id2} />
+									<input type="hidden" name="status" value={status} />
+									<div class="flex items-center gap-3">
+										<Button
+											class="rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 {getStatusColor(
+												status || ''
+											)}"
+											size="xs"
+											type="button"
+										>
+											{getStatusLabel(status)}
+										</Button>
 
-									<Dropdown simple class="border-none shadow-none">
-										<DropdownItem
-											class="w-full {getStatusColor('todo')}"
-											onclick={() => handleStatusChange('todo')}>To Do</DropdownItem
+										<Dropdown simple class="border-none shadow-none">
+											<DropdownItem
+												class="w-full {getStatusColor('todo')}"
+												onclick={() => handleStatusChange('todo')}>To Do</DropdownItem
+											>
+											<DropdownItem
+												class="w-full {getStatusColor('in_progress')}"
+												onclick={() => handleStatusChange('in_progress')}>In Progress</DropdownItem
+											>
+											<DropdownItem
+												class="w-full {getStatusColor('completed')}"
+												onclick={() => handleStatusChange('completed')}>Completed</DropdownItem
+											>
+											<DropdownItem
+												class="w-full {getStatusColor('canceled')}"
+												onclick={() => handleStatusChange('canceled')}>Canceled</DropdownItem
+											>
+										</Dropdown>
+									</div>
+								</form>
+							{/if}
+							{#if priority}
+								<form
+									id="priority-form"
+									action={updatePriorityAction}
+									method="post"
+									use:enhance={updatePriorityEnhanceFunction}
+								>
+									<input type="hidden" name="taskId" value={id} />
+									<input type="hidden" name="projectId" value={id2} />
+									<input type="hidden" name="priority" value={priority} />
+									<div class="flex items-center gap-3">
+										<Button
+											class="rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 {getStatusColor(
+												priority || ''
+											)}"
+											size="xs"
+											type="button"
 										>
-										<DropdownItem
-											class="w-full {getStatusColor('in_progress')}"
-											onclick={() => handleStatusChange('in_progress')}>In Progress</DropdownItem
-										>
-										<DropdownItem
-											class="w-full {getStatusColor('completed')}"
-											onclick={() => handleStatusChange('completed')}>Completed</DropdownItem
-										>
-										<DropdownItem
-											class="w-full {getStatusColor('canceled')}"
-											onclick={() => handleStatusChange('canceled')}>Canceled</DropdownItem
-										>
-									</Dropdown>
-								</div>
-							</form>
-						{/if}
+											{getStatusLabel(priority)}
+										</Button>
+
+										<Dropdown simple class="border-none shadow-none">
+											<DropdownItem
+												class="w-full {getStatusColor('low')}"
+												onclick={() => handlePriorityChange('low')}>Low</DropdownItem
+											>
+											<DropdownItem
+												class="w-full {getStatusColor('medium')}"
+												onclick={() => handlePriorityChange('medium')}>Medium</DropdownItem
+											>
+											<DropdownItem
+												class="w-full {getStatusColor('high')}"
+												onclick={() => handlePriorityChange('high')}>High</DropdownItem
+											>
+										</Dropdown>
+									</div>
+								</form>
+							{/if}
+						</div>
 					</div>
 
 					{#if description}
@@ -207,31 +273,47 @@
 				<div class="mb-6 flex items-center justify-between">
 					<h2 class="text-2xl font-bold text-gray-900">Sub Tasks</h2>
 					<button
-						class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-blue-700"
+						class="rounded-lg bg-gray-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-gray-700"
+						onclick={() => {
+							open = !open;
+						}}
 					>
-						+ Add Task
+						{#if open}
+							<AngleUpOutline />
+						{:else}
+							<PlusOutline />
+						{/if}
 					</button>
 				</div>
-
-				<div class="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-					<div class="text-gray-400">
-						<svg
-							class="mx-auto mb-4 h-12 w-12"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-							/>
-						</svg>
-						<p class="text-lg font-medium">No tasks yet</p>
-						<p class="text-sm">Add your first task to get started</p>
+				{#if open}
+					<div class="my-3">
+						<form action={subtaskAction} method="POST" use:enhance={subtackEnganceFunction}>
+							<input type="hidden" id="task_id" name="task_id" value={task_id} />
+							<div class="flex items-center gap-1">
+								<Input
+									size="md"
+									id="subtask"
+									name="subtask"
+									bind:value={subtask}
+									placeholder="Subtask...."
+								/>
+								<Button
+									type="submit"
+									class="border-none hover:text-green-800"
+									size="sm"
+									color="alternative"
+									disabled={loadingSubtask}
+								>
+									<CheckOutline class="hover:text-green-800" />
+								</Button>
+							</div>
+						</form>
 					</div>
-				</div>
+				{/if}
+
+				{#if todoContent}
+					{@render todoContent()}
+				{/if}
 			</div>
 		</div>
 	</div>

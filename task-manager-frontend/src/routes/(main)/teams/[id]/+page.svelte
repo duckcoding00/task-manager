@@ -288,16 +288,28 @@
 								<span class="font-medium">{tasks?.length}</span>
 							</div>
 							<div class="flex justify-between text-sm">
+								<span class="text-gray-500">Todo</span>
+								<span class="font-medium text-yellow-600"
+									>{tasks?.filter((task) => task.status === 'todo').length || 0}</span
+								>
+							</div>
+							<div class="flex justify-between text-sm">
 								<span class="text-gray-500">Completed</span>
-								<span class="font-medium text-green-600">0</span>
+								<span class="font-medium text-green-600"
+									>{tasks?.filter((task) => task.status === 'completed').length || 0}</span
+								>
 							</div>
 							<div class="flex justify-between text-sm">
 								<span class="text-gray-500">In Progress</span>
-								<span class="font-medium text-blue-600">0</span>
+								<span class="font-medium text-gray-600"
+									>{tasks?.filter((task) => task.status === 'in_progress').length || 0}</span
+								>
 							</div>
 							<div class="flex justify-between text-sm">
-								<span class="text-gray-500">Pending</span>
-								<span class="font-medium text-yellow-600">0</span>
+								<span class="text-gray-500">Cancel</span>
+								<span class="font-medium text-red-600"
+									>{tasks?.filter((task) => task.status === 'canceled').length || 0}</span
+								>
 							</div>
 						</div>
 					</Card>
@@ -367,7 +379,7 @@
 								class="cursor-pointer"
 								size="md"
 								onclick={() => {
-									goto('/teams');
+									goto(`/teams/${project?.id}/task/${task.id}`);
 								}}
 							/>
 						{/if}

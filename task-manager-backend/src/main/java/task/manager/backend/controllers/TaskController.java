@@ -21,6 +21,9 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import task.manager.backend.dto.request.TaskRequest;
+import task.manager.backend.dto.request.TeamTaskRequest;
+import task.manager.backend.repositories.SubTaskRepository.TaskType;
+import task.manager.backend.services.SubTaskService;
 import task.manager.backend.services.TaskService;
 import task.manager.backend.utils.ApiResponse;
 
@@ -29,6 +32,9 @@ public class TaskController {
 
     @Inject
     TaskService taskService;
+
+    @Inject
+    SubTaskService subTaskService;
 
     @Inject
     JsonWebToken jwt;
@@ -137,6 +143,7 @@ public class TaskController {
     @Path("/{id}/update")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
     public Uni<RestResponse<ApiResponse<Object>>> updateTask(@PathParam("id") String id, TaskRequest.update request) {
         Integer taskId = Integer.valueOf(id);
         return Uni.createFrom().item(() -> {
@@ -151,4 +158,81 @@ public class TaskController {
                     return RestResponse.status(Response.Status.OK, response);
                 });
     }
+
+    @POST
+    @Path("/{id}/subtask")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> createSubTask(
+            @PathParam("id") String id,
+            TeamTaskRequest.subtask task) {
+        Integer taskId = Integer.valueOf(id);
+        return subTaskService.insert(taskId, task, TaskType.SUB_TASKS)
+                .onItem().transform(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.CREATED.getStatusCode(),
+                            "success create subtask",
+                            result);
+                    return RestResponse.status(Response.Status.CREATED, response);
+                });
+    }
+
+    @GET
+    @Path("/{id}/subtask")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> getAll(
+            @PathParam("id") String id) {
+        Integer taskId = Integer.valueOf(id);
+        return subTaskService.getAll(taskId, TaskType.SUB_TASKS)
+                .onItem().transform(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.CREATED.getStatusCode(),
+                            "success create subtask",
+                            result);
+                    return RestResponse.status(Response.Status.CREATED, response);
+                });
+    }
+
+    @PATCH
+    @Path("/{id}/subtask/{taskId}")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> updateSttausSubTask(
+            @PathParam("id") String id,
+            @PathParam("taskId") String taskID,
+            String task) {
+        Integer taskId = Integer.valueOf(id);
+        Integer subTaskId = Integer.valueOf(taskID);
+        return subTaskService.updateStatus(subTaskId, TaskType.SUB_TASKS)
+                .onItem().transform(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.OK.getStatusCode(),
+                            "success update status subtask",
+                            result);
+                    return RestResponse.status(Response.Status.OK, response);
+                });
+    }
+
+    @DELETE
+    @Path("/{id}/subtask/{taskId}")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<RestResponse<ApiResponse<Object>>> deleteSubTask(
+            @PathParam("id") String id,
+            @PathParam("taskId") String taskID,
+            String task) {
+        Integer taskId = Integer.valueOf(id);
+        Integer subTaskId = Integer.valueOf(taskID);
+        return subTaskService.deleteSubtask(subTaskId, TaskType.SUB_TASKS)
+                .onItem().transform(result -> {
+                    ApiResponse<Object> response = ApiResponse.success(
+                            Response.Status.OK.getStatusCode(),
+                            "success delete subtask",
+                            result);
+                    return RestResponse.status(Response.Status.OK, response);
+                });
+    }
+
 }

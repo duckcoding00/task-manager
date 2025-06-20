@@ -24,6 +24,7 @@ export const load = (async ({ fetch, params }) => {
 				members: result.data.members,
 				tasks: result.data.tasks,
 				title: result.data.project.name,
+				projectName: result.data.project.name,
 				description: result.data.project.description
 			};
 		}

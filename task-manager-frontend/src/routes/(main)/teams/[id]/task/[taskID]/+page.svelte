@@ -1,38 +1,48 @@
 <script lang="ts">
+	import PageTask from '$lib/components/PageTask.svelte';
 	import { Button, Card } from 'flowbite-svelte';
 	import type { PageData } from './$types';
 	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { Section } from 'flowbite-svelte-blocks';
-	import FormModal from '$lib/components/FormModal.svelte';
 	import ActionModal from '$lib/components/ActionModal.svelte';
-	import PageTask from '$lib/components/PageTask.svelte';
-	import { CheckOutline, DeleteRowOutline } from 'flowbite-svelte-icons';
+	import FormModal from '$lib/components/FormModal.svelte';
 	import { enhance } from '$app/forms';
+	import { CheckOutline, DeleteRowOutline } from 'flowbite-svelte-icons';
 
 	let { data }: { data: PageData } = $props();
 	let task = $state(data.task);
-	let subTasks = $state(data.subtask);
-	let modal = $state(false);
-	let updateModal = $state(false);
-
-	let taskStatus = $state(task?.status ?? '');
+	let taskStatus = $state(task.status);
+	let taskPriority = $state(task.priority);
 	let taskTitle = $state(task.title);
 	let taskDescription = $state(task.description);
+
 	let taskValue = $state('');
+	let subTasks = $state(data.subtask);
 
-	let loading = $state(false);
-	let loadingDelete = $state(false);
-	let loadingUpdate = $state(false);
-	let successMessage = $state('');
-	let selectedDate = $state(task?.due_dated_at ? new Date(task.due_dated_at) : undefined);
+	let modal = $state(false);
+	let deleteModal = $state(false);
+	let updateModal = $state(false);
 
-	function customEnhance() {
-		loading = true;
-
+	let loadingUpdateStatus = $state(false);
+	function statusEnhance() {
+		loadingUpdateStatus = true;
 		return async ({ result, update, formData }: any) => {
-			loading = false;
+			loadingUpdateStatus = false;
 			if (result.type === 'success') {
 				taskStatus = formData.get('status') as string;
+				await invalidateAll();
+				await update();
+			}
+		};
+	}
+
+	let loadingUpdatePriority = $state(false);
+	function priorityEnhance() {
+		loadingUpdatePriority = true;
+		return async ({ result, update, formData }: any) => {
+			loadingUpdatePriority = false;
+			if (result.type === 'success') {
+				taskPriority = formData.get('priority') as string;
 				await invalidateAll();
 				await update();
 			}
@@ -43,6 +53,7 @@
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
+	let loadingDelete = $state(false);
 	function deleteEnhance() {
 		loadingDelete = true;
 
@@ -50,12 +61,10 @@
 			try {
 				console.log(result);
 
-				if (result.type === 'success') {
-					await delay(350);
-					await preloadData('/task');
-					goto('/task', {
-						invalidateAll: true
-					});
+				if (result.type === 'redirect') {
+					await delay(400);
+					await preloadData(result.location);
+					goto(result.location);
 				}
 			} catch (error) {
 				console.error('Error in deleteEnhance:', error);
@@ -65,6 +74,8 @@
 		};
 	}
 
+	let loadingUpdate = $state(false);
+	let successMessage = $state('');
 	function updateEnhance() {
 		loadingUpdate = true;
 		successMessage = '';
@@ -88,6 +99,8 @@
 			}
 		};
 	}
+
+	let selectedDate = $state(task?.due_date ? new Date(task.due_date) : undefined);
 
 	let loadingSubtask = $state(false);
 	function subtaskEnhance() {
@@ -154,14 +167,17 @@
 
 <PageTask
 	created={task.created_at}
-	duedated={task.due_dated_at}
+	duedated={task.due_date}
 	updated={task.updated_at}
 	title={taskTitle}
 	description={taskDescription}
-	status={taskStatus}
-	updateStatusEnhance={customEnhance}
 	id={task.id}
+	status={taskStatus}
+	priority={taskPriority}
+	updateStatusEnhance={statusEnhance}
+	updatePriorityEnhance={priorityEnhance}
 	updateStatusAction="?/updateStatus"
+	updatePriorityAction="?/updatePriority"
 	subtask={taskValue}
 	subtaskAction="?/subtask"
 	{subtaskEnhance}
@@ -204,7 +220,6 @@
 			Delete
 		</Button>
 	{/snippet}
-
 	{#snippet todoContent()}
 		{#if subTasks && subTasks.length > 0}
 			{#each subTasks as subtask (subtask.id)}
@@ -267,7 +282,7 @@
 <Section sectionClass="h-96">
 	<ActionModal
 		bind:open={modal}
-		loading={loadingDelete}
+		loading={deleteModal}
 		id={task?.id?.toString()}
 		enhance={deleteEnhance}
 		question="Are you sure you want to delete this Task {task?.title}?"

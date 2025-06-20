@@ -25,10 +25,10 @@
 <div class="m-4 p-4">
 	{#if tasks && tasks.length > 0}
 		<div
-			class="flex flex-col items-center gap-6 md:grid md:grid-cols-2 md:items-stretch lg:grid-cols-3 xl:grid-cols-4"
+			class="flex flex-col items-center gap-2 md:grid md:grid-cols-2 md:items-stretch lg:grid-cols-3 xl:grid-cols-4"
 		>
 			{#each tasks as task (task.id)}
-				<TaskCard title={task.title} date={task.due_dated_at}>
+				<TaskCard title={task.title} date={task.due_dated_at?.toString() || ''}>
 					{#snippet tRcontent(hovered: boolean)}
 						{#if hovered}
 							<AngleRightOutline
